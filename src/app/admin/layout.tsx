@@ -1,5 +1,5 @@
 import { redirect } from 'next/navigation';
-import { createClient } from '@/lib/supabase-server';
+import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { adminService } from '@/lib/admin-service';
 import Link from 'next/link';
 import {
@@ -16,7 +16,7 @@ export default async function AdminLayout({
 }: {
     children: React.ReactNode;
 }) {
-    const supabase = createClient();
+    const supabase = await createServerSupabaseClient();
 
     // 1. Check Authentication
     const { data: { user } } = await supabase.auth.getUser();
