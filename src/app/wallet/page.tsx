@@ -8,6 +8,7 @@ import { Input } from "@/components/ui/input";
 import { AppHeader } from "@/components/app-header";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { walletService, Wallet, WalletTransaction, WithdrawalRequest, WITHDRAWAL_FEE_PERCENT } from "@/lib/wallet-service";
+import { createClient } from "@/lib/supabase";
 import {
     Wallet as WalletIcon,
     ArrowUpRight,
@@ -30,11 +31,18 @@ export default function WalletPage() {
     const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
     const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
     const [loading, setLoading] = useState(true);
+
+    // Withdraw State
     const [showWithdraw, setShowWithdraw] = useState(false);
     const [withdrawAmount, setWithdrawAmount] = useState<string>("");
     const [withdrawing, setWithdrawing] = useState(false);
     const [withdrawError, setWithdrawError] = useState<string | null>(null);
     const [withdrawSuccess, setWithdrawSuccess] = useState(false);
+
+    // Deposit State
+    const [showDeposit, setShowDeposit] = useState(false);
+    const [depositAmount, setDepositAmount] = useState("");
+    const [depositResult, setDepositResult] = useState<{ reference_code: string; amount: number } | null>(null);
 
     useEffect(() => {
         loadWalletData();
@@ -81,6 +89,29 @@ export default function WalletPage() {
         setWithdrawing(false);
     };
 
+    const handleDeposit = async () => {
+        const amount = parseFloat(depositAmount);
+        if (isNaN(amount) || amount <= 0) return;
+
+        setLoading(true);
+        const supabase = createClient();
+
+        const { data, error } = await supabase.rpc('request_deposit', { p_amount: amount });
+
+        setLoading(false);
+
+        if (error) {
+            console.error(error);
+            // Could add error state here
+        } else if (data && data.success) {
+            setDepositResult({
+                reference_code: data.reference_code,
+                amount: data.amount
+            });
+            // Keep modal open to show instructions
+        }
+    };
+
     const formatCurrency = (amount: number) => {
         return walletService.formatCurrency(amount, wallet?.currency || 'USD');
     };
@@ -113,7 +144,7 @@ export default function WalletPage() {
     const fee = withdrawAmount ? parseFloat(withdrawAmount) * (WITHDRAWAL_FEE_PERCENT / 100) : 0;
     const netAmount = withdrawAmount ? parseFloat(withdrawAmount) - fee : 0;
 
-    if (loading) {
+    if (loading && !depositResult) { // Don't show full loader if just depositing
         return (
             <main className="min-h-screen bg-aurora flex items-center justify-center">
                 <Loader2 className="w-8 h-8 animate-spin text-primary" />
@@ -170,7 +201,7 @@ export default function WalletPage() {
                                 <ArrowUpRight className="w-4 h-4 mr-2" />
                                 Withdraw
                             </Button>
-                            <Button variant="outline" className="flex-1">
+                            <Button variant="outline" className="flex-1" onClick={() => setShowDeposit(true)}>
                                 <Plus className="w-4 h-4 mr-2" />
                                 Deposit
                             </Button>
@@ -282,6 +313,113 @@ export default function WalletPage() {
                     )}
                 </motion.div>
             </div>
+
+            {/* Deposit Modal */}
+            <AnimatePresence>
+                {showDeposit && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80"
+                        onClick={() => setShowDeposit(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.9, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.9, opacity: 0 }}
+                            className="w-full max-w-md card-premium p-6"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            {!depositResult ? (
+                                <>
+                                    <h2 className="text-xl font-bold mb-4 flex items-center gap-2">
+                                        <Plus className="w-5 h-5 text-green-400" />
+                                        Add Funds
+                                    </h2>
+                                    <p className="text-white/60 mb-6">
+                                        Enter the amount you wish to deposit. You will receive a reference code to use for your bank transfer.
+                                    </p>
+
+                                    <div className="mb-6">
+                                        <label className="block text-sm text-white/60 mb-2">Amount (USD)</label>
+                                        <Input
+                                            type="number"
+                                            value={depositAmount}
+                                            onChange={(e) => setDepositAmount(e.target.value)}
+                                            placeholder="50.00"
+                                            autoFocus
+                                            className="text-2xl font-bold bg-white/5 border-white/10"
+                                        />
+                                    </div>
+
+                                    <div className="flex gap-3">
+                                        <Button variant="outline" className="flex-1" onClick={() => setShowDeposit(false)}>
+                                            Cancel
+                                        </Button>
+                                        <Button
+                                            className="flex-1 bg-green-500 hover:bg-green-600 text-black font-bold"
+                                            onClick={handleDeposit}
+                                            disabled={!depositAmount || parseFloat(depositAmount) <= 0}
+                                        >
+                                            Generate Code
+                                        </Button>
+                                    </div>
+                                </>
+                            ) : (
+                                <>
+                                    <div className="text-center mb-6">
+                                        <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
+                                            <CheckCircle2 className="w-8 h-8 text-green-500" />
+                                        </div>
+                                        <h2 className="text-2xl font-bold mb-2">Request Created!</h2>
+                                        <p className="text-white/60">
+                                            Please make a bank transfer of <span className="text-white font-bold">${depositResult.amount}</span> details below:
+                                        </p>
+                                    </div>
+
+                                    <div className="bg-white/5 p-6 rounded-xl border border-white/10 mb-6 space-y-4">
+                                        <div>
+                                            <p className="text-xs text-white/40 uppercase tracking-widest mb-1">Bank Name</p>
+                                            <p className="font-medium">TechJack Global Ltd.</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-white/40 uppercase tracking-widest mb-1">Account Number</p>
+                                            <p className="font-mono font-medium">123-456-7890</p>
+                                        </div>
+                                        <div className="pt-4 border-t border-white/10">
+                                            <p className="text-xs text-yellow-400 uppercase tracking-widest mb-1 font-bold">Reference Code (REQUIRED)</p>
+                                            <div className="bg-black/30 p-3 rounded-lg flex justify-between items-center">
+                                                <code className="text-xl font-black text-yellow-400 tracking-wider">
+                                                    {depositResult.reference_code}
+                                                </code>
+                                                <Button size="sm" variant="ghost" onClick={() => navigator.clipboard.writeText(depositResult.reference_code)}>
+                                                    Copy
+                                                </Button>
+                                            </div>
+                                            <p className="text-xs text-white/40 mt-2">
+                                                * You MUST include this code in your transfer description for it to be credited.
+                                            </p>
+                                        </div>
+                                    </div>
+
+                                    <Button
+                                        className="w-full bg-white/10 hover:bg-white/20"
+                                        onClick={() => {
+                                            setShowDeposit(false);
+                                            setDepositResult(null);
+                                            setDepositAmount("");
+                                            loadWalletData();
+                                        }}
+                                    >
+                                        I've sent the transfer
+                                    </Button>
+                                </>
+                            )}
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Withdraw Modal */}
             <AnimatePresence>
