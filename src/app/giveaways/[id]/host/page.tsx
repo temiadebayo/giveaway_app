@@ -97,7 +97,10 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
 
     // Countdown timer
     useEffect(() => {
-        if (!giveaway?.ends_at || giveaway.status === 'ended') return;
+        if (!giveaway?.ends_at || giveaway.status === 'ended') {
+            setTimeLeft(null);
+            return;
+        }
 
         const updateTimer = () => {
             const now = new Date().getTime();
@@ -106,7 +109,7 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
             setTimeLeft(diff);
         };
 
-        updateTimer();
+        updateTimer(); // Initial call
         const interval = setInterval(updateTimer, 1000);
         return () => clearInterval(interval);
     }, [giveaway?.ends_at, giveaway?.status]);
@@ -198,7 +201,7 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                 </div>
             </nav>
 
-            <div className="max-w-7xl mx-auto p-6">
+            <div className="max-w-7xl mx-auto p-4 md:p-6">
                 {/* Back */}
                 <Link
                     href="/giveaways"

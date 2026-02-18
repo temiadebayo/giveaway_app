@@ -196,7 +196,10 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
 
     // Countdown timer for giveaway end
     useEffect(() => {
-        if (!giveaway?.ends_at || phase === 'ended') return;
+        if (!giveaway?.ends_at || phase === 'ended') {
+            setTimeLeft(null);
+            return;
+        }
 
         const updateTimer = () => {
             const now = new Date().getTime();
@@ -209,7 +212,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
             }
         };
 
-        updateTimer();
+        updateTimer(); // Initial call
         const interval = setInterval(updateTimer, 1000);
         return () => clearInterval(interval);
     }, [giveaway?.ends_at, phase]);
@@ -228,7 +231,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
             setStartCountdown(diff);
         };
 
-        updateStartTimer();
+        updateStartTimer(); // Initial call
         const interval = setInterval(updateStartTimer, 1000);
         return () => clearInterval(interval);
     }, [giveaway?.starts_at, giveaway?.status]);

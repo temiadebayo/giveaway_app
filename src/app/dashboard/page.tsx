@@ -56,11 +56,12 @@ export default function DashboardPage() {
                 </div>
             </nav>
 
-            <div className="max-w-7xl mx-auto p-6">
+            <div className="max-w-7xl mx-auto p-4 md:p-6">
                 {/* Header */}
                 <motion.div
-                    initial={{ opacity: 0, y: -20 }}
+                    initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
+                    transition={{ duration: 0.3 }}
                     className="mb-6"
                 >
                     <h1 className="text-3xl md:text-4xl font-black mb-2">
@@ -71,14 +72,14 @@ export default function DashboardPage() {
 
                 {/* Featured Host Giveaway CTA */}
                 <motion.div
-                    initial={{ opacity: 0, y: 20 }}
+                    initial={{ opacity: 0, y: 10 }}
                     animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.05 }}
+                    transition={{ delay: 0.05, duration: 0.3 }}
                     className="mb-6"
                 >
                     <Link href="/giveaways/create">
                         <motion.div
-                            whileHover={{ scale: 1.02, y: -2 }}
+                            whileHover={{ scale: 1.01 }}
                             whileTap={{ scale: 0.98 }}
                             className="relative overflow-hidden p-6 rounded-2xl bg-gradient-to-r from-pink-600 to-purple-600 cursor-pointer glow-primary"
                         >
@@ -103,30 +104,38 @@ export default function DashboardPage() {
                 <div className="grid lg:grid-cols-3 gap-6">
                     {/* Profile Card */}
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.1 }}
+                        transition={{ delay: 0.1, duration: 0.3 }}
                         className="lg:col-span-1 card-premium p-6"
                     >
-                        <div className="flex flex-col items-center text-center mb-6">
-                            {/* Avatar */}
-                            <div className="w-24 h-24 rounded-2xl bg-brand-gradient flex items-center justify-center mb-4 glow-primary">
-                                <UserIcon className="w-12 h-12 text-white" />
+                        {loading ? (
+                            <div className="animate-pulse flex flex-col items-center">
+                                <div className="w-24 h-24 rounded-2xl bg-white/10 mb-4" />
+                                <div className="h-6 w-32 bg-white/10 rounded mb-2" />
+                                <div className="h-4 w-48 bg-white/5 rounded" />
                             </div>
+                        ) : (
+                            <div className="flex flex-col items-center text-center mb-6">
+                                {/* Avatar */}
+                                <div className="w-24 h-24 rounded-2xl bg-brand-gradient flex items-center justify-center mb-4 glow-primary">
+                                    <UserIcon className="w-12 h-12 text-white" />
+                                </div>
 
-                            {/* Username */}
-                            <h2 className="text-xl font-bold mb-1">
-                                {user?.user_metadata?.username || user?.email?.split('@')[0] || 'Player'}
-                            </h2>
-                            <p className="text-white/40 text-sm truncate max-w-full">
-                                {user?.email}
-                            </p>
+                                {/* Username */}
+                                <h2 className="text-xl font-bold mb-1">
+                                    {user?.user_metadata?.username || user?.email?.split('@')[0] || 'Player'}
+                                </h2>
+                                <p className="text-white/40 text-sm truncate max-w-full">
+                                    {user?.email}
+                                </p>
 
-                            {/* Trust Tier Badge */}
-                            <div className="mt-4 px-5 py-2 rounded-full tier-bronze text-sm font-bold flex items-center gap-2">
-                                🥉 Bronze Tier
+                                {/* Trust Tier Badge */}
+                                <div className="mt-4 px-5 py-2 rounded-full tier-bronze text-sm font-bold flex items-center gap-2">
+                                    🥉 Bronze Tier
+                                </div>
                             </div>
-                        </div>
+                        )}
 
                         {/* Stats */}
                         <div className="grid grid-cols-2 gap-3 mb-4">
@@ -168,9 +177,9 @@ export default function DashboardPage() {
 
                     {/* Main Content */}
                     <motion.div
-                        initial={{ opacity: 0, y: 20 }}
+                        initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: 0.2 }}
+                        transition={{ delay: 0.15, duration: 0.3 }}
                         className="lg:col-span-2 space-y-6"
                     >
                         {/* Quick Actions */}
@@ -180,9 +189,9 @@ export default function DashboardPage() {
                                 {quickActions.map((action, i) => (
                                     <motion.div
                                         key={action.label}
-                                        initial={{ opacity: 0, scale: 0.9 }}
+                                        initial={{ opacity: 0, scale: 0.95 }}
                                         animate={{ opacity: 1, scale: 1 }}
-                                        transition={{ delay: 0.3 + i * 0.1 }}
+                                        transition={{ delay: 0.2 + i * 0.05, duration: 0.2 }}
                                     >
                                         <Link href={action.href}>
                                             <motion.div
