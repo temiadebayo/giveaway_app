@@ -175,8 +175,8 @@ export async function PUT(
             .single();
 
         const duration = giveaway?.game_duration_seconds || 30;
-        const maxTapsPerSecond = 15;
-        const SCORE_MULTIPLIER_TOLERANCE = 1.5;
+        const maxTapsPerSecond = 25;
+        const SCORE_MULTIPLIER_TOLERANCE = 8.0; // Allow significant variance for 5x multipliers + bonuses
 
         const maxPossibleTaps = duration * maxTapsPerSecond;
         const maxPossibleScore = taps * 10 * SCORE_MULTIPLIER_TOLERANCE;

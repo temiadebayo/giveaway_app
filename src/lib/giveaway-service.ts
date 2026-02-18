@@ -56,8 +56,8 @@ export interface Participant {
 }
 
 // Security constants
-const MAX_TAPS_PER_SECOND = 15; // Humanly impossible to exceed
-const SCORE_MULTIPLIER_TOLERANCE = 1.5; // Allow some variance in scoring
+const MAX_TAPS_PER_SECOND = 25; // Humanly impossible to exceed
+const SCORE_MULTIPLIER_TOLERANCE = 8.0; // Allow significant variance for 5x multipliers + bonuses
 
 class GiveawayService {
     private supabase = createClient();
