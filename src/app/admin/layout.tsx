@@ -74,13 +74,13 @@ export default async function AdminLayout({
     );
 }
 
-function NavLink({ href, icon, children }: { href: string; icon: React.ReactNode; children: React.ReactNode }) {
+function NavLink({ href, icon, children }: { href: string; icon: React.ReactElement; children: React.ReactNode }) {
     return (
         <Link
             href={href}
             className="flex items-center gap-3 px-4 py-3 rounded-xl text-slate-400 hover:text-white hover:bg-slate-800 transition-all font-medium"
         >
-            {React.cloneElement(icon as React.ReactElement, { className: "w-5 h-5" })}
+            {React.cloneElement(icon, { className: "w-5 h-5" } as React.HTMLAttributes<HTMLElement>)}
             {children}
         </Link>
     );
