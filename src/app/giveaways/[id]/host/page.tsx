@@ -51,6 +51,7 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
     const [isStarting, setIsStarting] = useState(false);
     const [copied, setCopied] = useState(false);
     const [scheduledCountdown, setScheduledCountdown] = useState<number | null>(null);
+    const [showQR, setShowQR] = useState(false);
 
     const loadData = useCallback(async () => {
         const supabase = createClient();
@@ -557,8 +558,8 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                                 <div className="flex justify-between text-sm">
                                     <span className="text-white/60">Status</span>
                                     <span className={`font-bold ${isLobby ? 'text-blue-400' :
-                                            isLive ? 'text-green-400' :
-                                                'text-white/60'
+                                        isLive ? 'text-green-400' :
+                                            'text-white/60'
                                         }`}>
                                         {giveaway.status.toUpperCase()}
                                     </span>
@@ -598,6 +599,26 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                             </div>
                         </motion.div>
 
+                        {/* QR Code */}
+                        <motion.div
+                            initial={{ opacity: 0, x: 20 }}
+                            animate={{ opacity: 1, x: 0 }}
+                            transition={{ delay: 0.15 }}
+                            className="card-premium p-4"
+                        >
+                            <button
+                                onClick={() => setShowQR(true)}
+                                className="w-full bg-white p-4 rounded-xl flex flex-col items-center justify-center text-center hover:opacity-90 transition-opacity cursor-pointer"
+                            >
+                                <img
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=150x150&data=${encodeURIComponent(giveawayService.getShareUrl(id))}&bgcolor=ffffff`}
+                                    alt="Giveaway QR Code"
+                                    className="w-28 h-28 mb-2"
+                                />
+                                <p className="text-black/60 text-xs font-medium">Tap to enlarge</p>
+                            </button>
+                        </motion.div>
+
                         {/* Stats */}
                         {!isLobby && (
                             <motion.div
@@ -619,6 +640,37 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                     </div>
                 </div>
             </div>
+
+            {/* Fullscreen QR Modal */}
+            <AnimatePresence>
+                {showQR && (
+                    <motion.div
+                        initial={{ opacity: 0 }}
+                        animate={{ opacity: 1 }}
+                        exit={{ opacity: 0 }}
+                        className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/90"
+                        onClick={() => setShowQR(false)}
+                    >
+                        <motion.div
+                            initial={{ scale: 0.7, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            exit={{ scale: 0.7, opacity: 0 }}
+                            className="flex flex-col items-center"
+                            onClick={(e) => e.stopPropagation()}
+                        >
+                            <div className="bg-white p-8 rounded-3xl shadow-2xl">
+                                <img
+                                    src={`https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(giveawayService.getShareUrl(id))}&bgcolor=ffffff`}
+                                    alt="Giveaway QR Code"
+                                    className="w-72 h-72 sm:w-96 sm:h-96"
+                                />
+                            </div>
+                            <p className="text-white text-lg font-bold mt-6">Scan to Join</p>
+                            <p className="text-white/40 text-sm mt-1">Tap anywhere to close</p>
+                        </motion.div>
+                    </motion.div>
+                )}
+            </AnimatePresence>
 
             {/* Player Profile Modal */}
             <AnimatePresence>
