@@ -11,6 +11,7 @@ interface TapGameProps {
     onGameEnd?: (state: TapGameState) => void;
     onScoreUpdate?: (score: number) => void;
     disabled?: boolean;
+    autoStart?: boolean;
 }
 
 interface FloatingScore {
@@ -24,7 +25,8 @@ export function TapGame({
     duration = 30,
     onGameEnd,
     onScoreUpdate,
-    disabled = false
+    disabled = false,
+    autoStart = false
 }: TapGameProps) {
     const [gameState, setGameState] = useState<TapGameState | null>(null);
     const [isReady, setIsReady] = useState(false);
@@ -57,6 +59,14 @@ export function TapGame({
 
     // Start countdown then game
     const startGame = useCallback(() => {
+        if (autoStart) {
+            // Skip countdown, start immediately
+            setIsReady(true);
+            setCountdown(0);
+            gameRef.current?.start();
+            return;
+        }
+
         setIsReady(true);
         setCountdown(3);
 
@@ -70,7 +80,14 @@ export function TapGame({
                 return prev - 1;
             });
         }, 1000);
-    }, []);
+    }, [autoStart]);
+
+    // Auto-start on mount when autoStart is true
+    useEffect(() => {
+        if (autoStart && gameRef.current) {
+            startGame();
+        }
+    }, [autoStart, startGame]);
 
     // Handle tap
     const handleTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {

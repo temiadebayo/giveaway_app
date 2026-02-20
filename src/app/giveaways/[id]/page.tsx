@@ -147,7 +147,12 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                     setLobbyParticipants(lobbyData);
                 }
             } else {
-                setPhase('lobby');
+                // No fingerprint yet — set phase based on giveaway status
+                if (giveawayData.status === 'ended') {
+                    setPhase('ended');
+                } else {
+                    setPhase('lobby');
+                }
             }
         }
 
@@ -1151,6 +1156,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                     <TapGame
                                         duration={giveaway.game_duration_seconds}
                                         onGameEnd={handleGameEnd}
+                                        autoStart
                                     />
                                 </motion.div>
                             )}
