@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useSearchParams } from "next/navigation";
@@ -15,6 +15,14 @@ import FredMascot from "@/assets/Fred_GA_Mascot.svg";
 import logoWhite from "@/assets/logo_white.png";
 
 export default function LoginPage() {
+    return (
+        <Suspense>
+            <LoginPageContent />
+        </Suspense>
+    );
+}
+
+function LoginPageContent() {
     const [email, setEmail] = useState("");
     const [password, setPassword] = useState("");
     const [showEmailForm, setShowEmailForm] = useState(false);
