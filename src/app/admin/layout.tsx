@@ -33,7 +33,7 @@ export default async function AdminLayout({
     return (
         <div className="min-h-screen bg-slate-950 text-white flex">
             {/* Sidebar */}
-            <aside className="w-64 bg-slate-900 border-r border-slate-800 flex flex-col fixed inset-y-0">
+            <aside className="w-64 bg-slate-900 border-r border-slate-800 flex-col fixed inset-y-0 hidden md:flex">
                 <div className="p-6 border-b border-slate-800 flex items-center gap-3">
                     <ShieldCheck className="w-8 h-8 text-indigo-500" />
                     <div>
@@ -67,7 +67,7 @@ export default async function AdminLayout({
             </aside>
 
             {/* Main Content */}
-            <main className="flex-1 ml-64 p-8">
+            <main className="flex-1 md:ml-64 p-4 md:p-8 overflow-x-hidden">
                 {children}
             </main>
         </div>

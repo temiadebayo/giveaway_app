@@ -169,7 +169,7 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
     const isEnded = giveaway.status === 'ended';
 
     return (
-        <main className="min-h-screen bg-aurora">
+        <main className="min-h-screen bg-aurora overflow-x-hidden">
             {/* Navbar */}
             <nav className="sticky top-0 z-50 px-6 py-4 glass">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">

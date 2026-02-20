@@ -64,7 +64,7 @@ export default function TrustScorePage() {
     }
 
     return (
-        <main className="min-h-screen bg-aurora">
+        <main className="min-h-screen bg-aurora overflow-x-hidden">
             {/* Navbar */}
             <nav className="sticky top-0 z-50 px-6 py-4 glass">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -179,7 +179,7 @@ export default function TrustScorePage() {
                                                 </div>
                                             </div>
                                             <span className={`font-bold ${event.score_change > 0 ? 'text-green-400' :
-                                                    event.score_change < 0 ? 'text-red-400' : 'text-white/40'
+                                                event.score_change < 0 ? 'text-red-400' : 'text-white/40'
                                                 }`}>
                                                 {event.score_change > 0 ? '+' : ''}{event.score_change}
                                             </span>

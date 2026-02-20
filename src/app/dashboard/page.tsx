@@ -41,7 +41,7 @@ export default function DashboardPage() {
     ];
 
     return (
-        <main className="min-h-screen bg-aurora">
+        <main className="min-h-screen bg-aurora overflow-x-hidden">
             {/* Navbar */}
             <nav className="sticky top-0 z-50 px-6 py-4 glass">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -56,7 +56,7 @@ export default function DashboardPage() {
                 </div>
             </nav>
 
-            <div className="max-w-7xl mx-auto p-4 md:p-6">
+            <div className="max-w-7xl mx-auto px-3 py-4 md:p-6 w-full box-border">
                 {/* Header */}
                 <motion.div
                     initial={{ opacity: 0, y: -10 }}
@@ -101,13 +101,13 @@ export default function DashboardPage() {
                     </Link>
                 </motion.div>
 
-                <div className="grid lg:grid-cols-3 gap-6">
+                <div className="grid lg:grid-cols-3 gap-4 md:gap-6 min-w-0">
                     {/* Profile Card */}
                     <motion.div
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.1, duration: 0.3 }}
-                        className="lg:col-span-1 card-premium p-6"
+                        className="lg:col-span-1 card-premium p-4 md:p-6 min-w-0"
                     >
                         {loading ? (
                             <div className="animate-pulse flex flex-col items-center">
@@ -138,7 +138,7 @@ export default function DashboardPage() {
                         )}
 
                         {/* Stats */}
-                        <div className="grid grid-cols-2 gap-3 mb-4">
+                        <div className="grid grid-cols-2 gap-2 sm:gap-3 mb-4">
                             <div className="bg-white/5 rounded-xl p-4 text-center border border-white/5">
                                 <Trophy className="w-5 h-5 mx-auto mb-1 text-yellow-400" />
                                 <p className="text-2xl font-bold">0</p>
@@ -180,10 +180,10 @@ export default function DashboardPage() {
                         initial={{ opacity: 0, y: 10 }}
                         animate={{ opacity: 1, y: 0 }}
                         transition={{ delay: 0.15, duration: 0.3 }}
-                        className="lg:col-span-2 space-y-6"
+                        className="lg:col-span-2 space-y-4 md:space-y-6 min-w-0"
                     >
                         {/* Quick Actions */}
-                        <div className="card-premium p-6">
+                        <div className="card-premium p-4 md:p-6">
                             <h3 className="text-lg font-bold mb-4">Quick Actions</h3>
                             <div className="grid grid-cols-2 md:grid-cols-4 gap-3">
                                 {quickActions.map((action, i) => (
@@ -230,9 +230,9 @@ export default function DashboardPage() {
                                             Confidence: {fingerprint.confidence}%
                                         </span>
                                     </div>
-                                    <div className="p-3 bg-white/5 rounded-xl border border-white/5">
+                                    <div className="p-3 bg-white/5 rounded-xl border border-white/5 overflow-hidden">
                                         <p className="text-xs text-white/40 mb-1">Device Fingerprint</p>
-                                        <p className="text-xs font-mono text-white/60 truncate">
+                                        <p className="text-xs font-mono text-white/60 truncate max-w-full">
                                             {fingerprint.hash}
                                         </p>
                                     </div>

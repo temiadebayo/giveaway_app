@@ -153,11 +153,11 @@ export default function WalletPage() {
     }
 
     return (
-        <main className="min-h-screen bg-aurora">
+        <main className="min-h-screen bg-aurora overflow-x-hidden">
             {/* App Header with User Avatar */}
             <AppHeader />
 
-            <div className="max-w-4xl mx-auto p-4 sm:p-6">
+            <div className="max-w-4xl mx-auto px-3 py-4 sm:p-6">
                 {/* Breadcrumbs */}
                 <Breadcrumbs items={[
                     { label: 'Wallet' }
@@ -181,7 +181,7 @@ export default function WalletPage() {
                     initial={{ opacity: 0, y: 20 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: 0.1 }}
-                    className="grid md:grid-cols-2 gap-4 mb-8"
+                    className="grid md:grid-cols-2 gap-3 sm:gap-4 mb-8"
                 >
                     {/* Available Balance */}
                     <div className="card-premium p-6">
@@ -189,7 +189,7 @@ export default function WalletPage() {
                             <TrendingUp className="w-4 h-4" />
                             <span className="text-sm">Available Balance</span>
                         </div>
-                        <p className="text-4xl font-black text-gradient-primary">
+                        <p className="text-3xl sm:text-4xl font-black text-gradient-primary">
                             {formatCurrency(wallet?.balance || 0)}
                         </p>
                         <div className="flex gap-2 mt-4">

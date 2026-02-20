@@ -83,7 +83,7 @@ export default function GiveawaysPage() {
     };
 
     return (
-        <main className="min-h-screen bg-aurora">
+        <main className="min-h-screen bg-aurora overflow-x-hidden">
             {/* App Header with User Avatar */}
             <AppHeader
                 rightContent={
@@ -107,7 +107,7 @@ export default function GiveawaysPage() {
                 }
             />
 
-            <div className="max-w-7xl mx-auto p-4 sm:p-6">
+            <div className="max-w-7xl mx-auto px-3 py-4 sm:p-6">
                 {/* Breadcrumbs */}
                 <Breadcrumbs items={[
                     { label: 'Giveaways' }

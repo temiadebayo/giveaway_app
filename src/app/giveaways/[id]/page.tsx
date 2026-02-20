@@ -449,7 +449,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
     const tierBenefits = TIER_BENEFITS[giveaway.min_trust_tier as TrustTier];
 
     return (
-        <main className="min-h-screen bg-aurora">
+        <main className="min-h-screen bg-aurora overflow-x-hidden">
             {/* App Header */}
             <AppHeader
                 rightContent={
