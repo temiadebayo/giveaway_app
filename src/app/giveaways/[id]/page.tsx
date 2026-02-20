@@ -140,6 +140,12 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                 } else {
                     setPhase('lobby');
                 }
+
+                // Load lobby participants for scheduled giveaways (same as auth users)
+                if (giveawayData.status === 'scheduled') {
+                    const lobbyData = await giveawayService.getLobbyParticipants(id);
+                    setLobbyParticipants(lobbyData);
+                }
             } else {
                 setPhase('lobby');
             }
@@ -256,7 +262,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
     // AUTO-JOIN: Guests automatically join live giveaways on page load
     useEffect(() => {
         if (!giveaway || !fingerprintId || !isGuest) return;
-        if (giveaway.status !== 'live') return;
+        if (!['live', 'scheduled'].includes(giveaway.status)) return;
         if (guestParticipation) return; // Already joined
         if (joining) return; // Already joining
 

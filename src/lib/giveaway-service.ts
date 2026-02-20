@@ -696,9 +696,11 @@ class GiveawayService {
 
     /**
      * Get all participants in the lobby (for lobby view)
+     * Includes both authenticated users and guest participants
      */
     async getLobbyParticipants(giveawayId: string): Promise<Participant[]> {
-        const { data, error } = await this.supabase
+        // 1. Fetch authenticated participants
+        const { data: authData, error: authError } = await this.supabase
             .from('giveaway_participants')
             .select(`
                 *,
@@ -707,19 +709,57 @@ class GiveawayService {
             .eq('giveaway_id', giveawayId)
             .order('joined_at', { ascending: true });
 
-        if (error) {
-            console.error('Error fetching lobby participants:', error);
-            return [];
+        if (authError) {
+            console.error('Error fetching lobby participants:', authError);
         }
 
-        return (data || []).map((p: any) => ({
+        const authParticipants = (authData || []).map((p: any) => ({
             ...p,
             user: p.user,
         }));
+
+        // 2. Fetch guest participants
+        const { data: guestData, error: guestError } = await this.supabase
+            .from('guest_participants')
+            .select('*')
+            .eq('giveaway_id', giveawayId)
+            .order('joined_at', { ascending: true });
+
+        if (guestError) {
+            console.error('Error fetching guest lobby participants:', guestError);
+        }
+
+        const guestParticipants = (guestData || []).map((g: any) => ({
+            id: g.id,
+            giveaway_id: g.giveaway_id,
+            user_id: g.fingerprint_id,
+            score: g.score || 0,
+            taps: g.taps || 0,
+            best_streak: g.best_streak || 0,
+            rank: null,
+            joined_at: g.joined_at,
+            completed_at: g.completed_at,
+            is_winner: g.is_winner || false,
+            user: {
+                id: g.fingerprint_id,
+                username: g.guest_name || 'Guest',
+                display_name: g.guest_name || 'Guest',
+                avatar_url: null,
+                trust_tier: 'bronze'
+            },
+            fingerprint_id: g.fingerprint_id,
+        }));
+
+        // 3. Combine and sort by joined_at
+        return [...authParticipants, ...guestParticipants].sort(
+            (a: any, b: any) => new Date(a.joined_at).getTime() - new Date(b.joined_at).getTime()
+        ) as Participant[];
     }
+
 
     /**
      * Subscribe to lobby participant changes (joins)
+     * Watches both authenticated and guest participant tables
      */
     subscribeToLobby(
         giveawayId: string,
@@ -736,7 +776,19 @@ class GiveawayService {
                     filter: `giveaway_id=eq.${giveawayId}`
                 },
                 async () => {
-                    // Refetch full participant list with profiles
+                    const participants = await this.getLobbyParticipants(giveawayId);
+                    callback(participants);
+                }
+            )
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'guest_participants',
+                    filter: `giveaway_id=eq.${giveawayId}`
+                },
+                async () => {
                     const participants = await this.getLobbyParticipants(giveawayId);
                     callback(participants);
                 }
