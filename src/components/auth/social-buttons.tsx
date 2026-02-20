@@ -133,7 +133,7 @@ interface SocialAuthButtonsProps {
 }
 
 export function SocialAuthButtons({
-    providers = ["google", "discord", "apple", "twitter"],
+    providers = ["google", "discord"],
     onProviderClick,
     loading,
     disabled

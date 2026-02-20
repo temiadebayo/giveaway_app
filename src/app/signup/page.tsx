@@ -250,7 +250,7 @@ export default function SignupPage() {
                     ) : (
                         // Social signup options
                         <>
-                            <SocialAuthButtons providers={["google", "discord", "apple", "twitter"]} />
+                            <SocialAuthButtons providers={["google", "discord"]} />
 
                             <AuthDivider />
 

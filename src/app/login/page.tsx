@@ -213,7 +213,7 @@ export default function LoginPage() {
                     ) : (
                         // Social login options
                         <>
-                            <SocialAuthButtons providers={["google", "discord", "apple", "twitter"]} />
+                            <SocialAuthButtons providers={["google", "discord"]} />
 
                             <AuthDivider />
 
