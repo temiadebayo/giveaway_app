@@ -195,9 +195,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
 
                     // Auto-start game when giveaway goes live
                     if (updated.status === 'live') {
-                        // All users who have joined the lobby auto-start the game
-                        setPhase('countdown');
-                        setCountdown(3);
+                        handleStartGame();
                     }
 
                     if (updated.status === 'ended') {
