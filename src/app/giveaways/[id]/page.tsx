@@ -37,7 +37,9 @@ import {
     Copy,
     Check,
     LogIn,
-    User
+    User,
+    Pencil,
+    Save
 } from "lucide-react";
 import logoWhite from "@/assets/logo_white.png";
 
@@ -89,6 +91,13 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
     const [isReady, setIsReady] = useState(false);
     const [startCountdown, setStartCountdown] = useState<number | null>(null);
 
+    // Lobby state
+    const [lobbyParticipants, setLobbyParticipants] = useState<Participant[]>([]);
+    const [floatingEmotes, setFloatingEmotes] = useState<{ id: number; emote: string; username: string }[]>([]);
+    const [editingProfile, setEditingProfile] = useState(false);
+    const [editUsername, setEditUsername] = useState('');
+    const emoteIdRef = useRef(0);
+
     // Load giveaway data
     const loadData = useCallback(async () => {
         const supabase = createClient();
@@ -110,10 +119,14 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                     setPhase('ended');
                 } else if (participationData?.completed_at) {
                     setPhase('waiting');
-                } else if (participationData) {
-                    setPhase('lobby');
                 } else {
                     setPhase('lobby');
+                }
+
+                // Load lobby participants if in scheduled (lobby) phase
+                if (giveawayData.status === 'scheduled') {
+                    const lobbyData = await giveawayService.getLobbyParticipants(id);
+                    setLobbyParticipants(lobbyData);
                 }
             } else if (fingerprintId) {
                 // Guest - check guest participation
@@ -124,8 +137,6 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                     setPhase('ended');
                 } else if (guestData?.completed_at) {
                     setPhase('waiting');
-                } else if (guestData) {
-                    setPhase('lobby');
                 } else {
                     setPhase('lobby');
                 }
@@ -146,6 +157,21 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
             setLeaderboard(participants);
         });
 
+        // Lobby participant subscription (real-time joins)
+        const lobbyChannel = giveawayService.subscribeToLobby(id, (lobbyParts) => {
+            setLobbyParticipants(lobbyParts);
+        });
+
+        // Lobby emotes subscription
+        const emoteChannel = giveawayService.subscribeToLobbyEmotes(id, (emoteData) => {
+            const emoteId = emoteIdRef.current++;
+            setFloatingEmotes(prev => [...prev, { id: emoteId, emote: emoteData.emote, username: emoteData.username }]);
+            // Remove after animation
+            setTimeout(() => {
+                setFloatingEmotes(prev => prev.filter(e => e.id !== emoteId));
+            }, 3000);
+        });
+
         const supabase = createClient();
         const statusChannel = supabase
             .channel(`giveaway:${id}`)
@@ -159,22 +185,11 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                 },
                 async (payload) => {
                     const updated = payload.new as Giveaway;
-                    const prevStatus = giveaway?.status;
                     setGiveaway(prev => prev ? { ...prev, ...updated } : null);
 
-                    // Auto-join when giveaway goes live (if user is ready)
-                    if (prevStatus === 'scheduled' && updated.status === 'live' && isReady) {
-                        // Auto-join for ready users
-                        if (isGuest && fingerprintId) {
-                            await giveawayService.joinAsGuest(id, fingerprintId, guestName || generateRandomUsername());
-                            const guestData = await giveawayService.getGuestParticipation(id, fingerprintId);
-                            setGuestParticipation(guestData);
-                        } else if (currentUserId) {
-                            await giveawayService.joinGiveaway(id);
-                            const participationData = await giveawayService.getParticipation(id);
-                            setParticipation(participationData);
-                        }
-                        // Auto-start game after brief delay
+                    // Auto-start game when giveaway goes live
+                    if (updated.status === 'live') {
+                        // All users who have joined the lobby auto-start the game
                         setPhase('countdown');
                         setCountdown(3);
                     }
@@ -189,10 +204,12 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
 
         return () => {
             channel.unsubscribe();
+            lobbyChannel.unsubscribe();
+            emoteChannel.unsubscribe();
             statusChannel.unsubscribe();
         };
         // eslint-disable-next-line react-hooks/exhaustive-deps
-    }, [id, loadData, isReady, isGuest, fingerprintId, currentUserId, guestName]);
+    }, [id, loadData]);
 
     // Countdown timer for giveaway end
     useEffect(() => {
@@ -217,24 +234,24 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
         return () => clearInterval(interval);
     }, [giveaway?.ends_at, phase]);
 
-    // Countdown timer for scheduled giveaway start
+    // Countdown timer for scheduled giveaway auto-start
     useEffect(() => {
-        if (!giveaway?.starts_at || giveaway.status !== 'scheduled') {
+        if (!giveaway?.scheduled_start_at || giveaway.status !== 'scheduled') {
             setStartCountdown(null);
             return;
         }
 
         const updateStartTimer = () => {
             const now = new Date().getTime();
-            const start = new Date(giveaway.starts_at!).getTime();
+            const start = new Date(giveaway.scheduled_start_at!).getTime();
             const diff = Math.max(0, Math.floor((start - now) / 1000));
             setStartCountdown(diff);
         };
 
-        updateStartTimer(); // Initial call
+        updateStartTimer();
         const interval = setInterval(updateStartTimer, 1000);
         return () => clearInterval(interval);
-    }, [giveaway?.starts_at, giveaway?.status]);
+    }, [giveaway?.scheduled_start_at, giveaway?.status]);
 
     // AUTO-JOIN: Guests automatically join live giveaways on page load
     useEffect(() => {
@@ -268,13 +285,16 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
         }
     };
 
-    // Join as authenticated user
+    // Join as authenticated user (used for both lobby join and live join)
     const handleJoin = async () => {
         setJoining(true);
         const result = await giveawayService.joinGiveaway(id);
         if (result.success) {
             const participationData = await giveawayService.getParticipation(id);
             setParticipation(participationData);
+            // Refresh lobby participants
+            const lobbyData = await giveawayService.getLobbyParticipants(id);
+            setLobbyParticipants(lobbyData);
         }
         setJoining(false);
     };
@@ -292,6 +312,26 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
             setShowNameInput(false);
         }
         setJoining(false);
+    };
+
+    // Send emote in lobby
+    const handleSendEmote = async (emote: string) => {
+        if (!currentUserId) return;
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        const profile = await supabase.from('profiles').select('username').eq('id', user?.id).single();
+        await giveawayService.sendLobbyEmote(id, emote, profile.data?.username || 'Player');
+    };
+
+    // Handle save profile in lobby
+    const handleSaveProfile = async () => {
+        if (!editUsername.trim()) return;
+        const supabase = createClient();
+        await supabase.from('profiles').update({ username: editUsername.trim(), display_name: editUsername.trim() }).eq('id', currentUserId);
+        setEditingProfile(false);
+        // Refresh lobby participants to show updated name
+        const lobbyData = await giveawayService.getLobbyParticipants(id);
+        setLobbyParticipants(lobbyData);
     };
 
     const handleStartGame = () => {
@@ -454,13 +494,15 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
             <AppHeader
                 rightContent={
                     <div className="flex items-center gap-2">
-                        {/* Share Button */}
-                        <button
-                            onClick={handleShare}
-                            className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
-                        >
-                            <Share2 className="w-5 h-5" />
-                        </button>
+                        {/* Share Button - only if sharing allowed or user is host */}
+                        {(giveaway?.allow_sharing || isHost) && (
+                            <button
+                                onClick={handleShare}
+                                className="p-2 rounded-lg bg-white/10 hover:bg-white/20 transition-colors"
+                            >
+                                <Share2 className="w-5 h-5" />
+                            </button>
+                        )}
 
                         {isLive && timeLeft !== null && (
                             <div className="flex items-center gap-2 px-3 py-2 rounded-lg bg-white/10">
@@ -651,87 +693,186 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                 </motion.div>
                             )}
 
-                            {/* SCHEDULED LOBBY - Waiting for giveaway to start */}
+                            {/* SCHEDULED LOBBY - Auth-only lobby room */}
                             {phase === 'lobby' && isScheduled && (
                                 <motion.div
                                     key="lobby-scheduled"
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -20 }}
-                                    className="card-premium p-8 text-center"
+                                    className="space-y-4"
                                 >
-                                    {/* Animated waiting indicator */}
-                                    <div className="relative w-24 h-24 mx-auto mb-6">
-                                        <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 animate-pulse" />
-                                        <div className="absolute inset-2 rounded-full bg-gray-900 flex items-center justify-center">
-                                            <Clock className="w-10 h-10 text-blue-400" />
-                                        </div>
-                                    </div>
-
-                                    <h3 className="text-2xl font-bold mb-2">Giveaway Starting Soon!</h3>
-
-                                    {/* Countdown display */}
-                                    {startCountdown !== null && (
-                                        <div className="mb-6">
-                                            <p className="text-white/60 mb-2">Starts in</p>
-                                            <div className="text-4xl font-black text-gradient-primary">
-                                                {formatStartCountdown(startCountdown)}
+                                    {/* Guest gate — must sign in */}
+                                    {isGuest ? (
+                                        <div className="card-premium p-8 text-center">
+                                            <div className="relative w-24 h-24 mx-auto mb-6">
+                                                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 animate-pulse" />
+                                                <div className="absolute inset-2 rounded-full bg-gray-900 flex items-center justify-center">
+                                                    <LogIn className="w-10 h-10 text-blue-400" />
+                                                </div>
                                             </div>
-                                        </div>
-                                    )}
-
-                                    <p className="text-white/60 mb-6">
-                                        Get ready to tap as fast as you can for {formatPrize(giveaway.prize_amount, giveaway.prize_currency)}!
-                                    </p>
-
-                                    {/* Get Ready / Already Ready state */}
-                                    {isReady ? (
-                                        <div className="space-y-4">
-                                            <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-green-500/20 border border-green-500/50">
-                                                <Sparkles className="w-5 h-5 text-green-400 animate-pulse" />
-                                                <span className="font-bold text-green-400">You're Ready!</span>
-                                            </div>
-                                            <p className="text-sm text-white/40">
-                                                You'll automatically join when the giveaway starts
+                                            <h3 className="text-2xl font-bold mb-2">Sign In to Join</h3>
+                                            <p className="text-white/60 mb-6">
+                                                You need an account to join the lobby and compete for {formatPrize(giveaway.prize_amount, giveaway.prize_currency)}!
                                             </p>
+                                            <Link href={`/login?redirect=/giveaways/${id}`}>
+                                                <Button size="lg" className="bg-brand-gradient px-8">
+                                                    <LogIn className="w-5 h-5 mr-2" />
+                                                    Sign In to Join
+                                                </Button>
+                                            </Link>
                                         </div>
                                     ) : (
-                                        <div className="space-y-4">
-                                            {isGuest ? (
-                                                <div className="space-y-3">
-                                                    <Input
-                                                        value={guestName}
-                                                        onChange={(e) => setGuestName(e.target.value)}
-                                                        placeholder="Your nickname (optional)"
-                                                        className="max-w-xs mx-auto text-center"
-                                                    />
+                                        /* Authenticated lobby */
+                                        <>
+                                            {/* Join CTA or In-lobby state */}
+                                            {!hasJoined ? (
+                                                <div className="card-premium p-8 text-center">
+                                                    <Sparkles className="w-12 h-12 mx-auto mb-4 text-primary" />
+                                                    <h3 className="text-2xl font-bold mb-2">Join the Lobby!</h3>
+                                                    <p className="text-white/60 mb-6">
+                                                        Enter the lobby and wait for the host to start the event.
+                                                    </p>
                                                     <Button
                                                         size="lg"
                                                         className="bg-brand-gradient px-8"
-                                                        onClick={() => setIsReady(true)}
+                                                        onClick={handleJoin}
+                                                        disabled={joining}
                                                     >
-                                                        <Sparkles className="w-5 h-5 mr-2" />
-                                                        Get Ready!
+                                                        {joining ? (
+                                                            <Loader2 className="w-5 h-5 animate-spin mr-2" />
+                                                        ) : (
+                                                            <Users className="w-5 h-5 mr-2" />
+                                                        )}
+                                                        Join Lobby
                                                     </Button>
-                                                    <p className="text-sm text-white/40">
-                                                        or{' '}
-                                                        <Link href="/auth" className="text-primary underline">
-                                                            sign in
-                                                        </Link>
-                                                        {' '}to claim prizes
-                                                    </p>
                                                 </div>
                                             ) : (
-                                                <Button
-                                                    size="lg"
-                                                    className="bg-brand-gradient px-8"
-                                                    onClick={() => setIsReady(true)}
-                                                >
-                                                    <Sparkles className="w-5 h-5 mr-2" />
-                                                    Get Ready!
-                                                </Button>
+                                                /* In the lobby — waiting for host to start */
+                                                <div className="card-premium p-6">
+                                                    <div className="text-center mb-6">
+                                                        <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-green-500/20 border border-green-500/50 mb-3">
+                                                            <Sparkles className="w-5 h-5 text-green-400 animate-pulse" />
+                                                            <span className="font-bold text-green-400">You're In!</span>
+                                                        </div>
+                                                        <p className="text-white/60">
+                                                            {startCountdown !== null && startCountdown > 0
+                                                                ? `Event starts in ${formatStartCountdown(startCountdown)}`
+                                                                : 'Waiting for host to start the event...'
+                                                            }
+                                                        </p>
+                                                    </div>
+
+                                                    {/* Floating Emotes */}
+                                                    <div className="relative h-12 overflow-hidden mb-4">
+                                                        <AnimatePresence>
+                                                            {floatingEmotes.map((e) => (
+                                                                <motion.div
+                                                                    key={e.id}
+                                                                    initial={{ opacity: 1, y: 0, x: Math.random() * 80 + 10 + '%' }}
+                                                                    animate={{ opacity: 0, y: -60 }}
+                                                                    exit={{ opacity: 0 }}
+                                                                    transition={{ duration: 2.5 }}
+                                                                    className="absolute bottom-0 text-2xl"
+                                                                >
+                                                                    <span>{e.emote}</span>
+                                                                    <span className="text-xs text-white/40 ml-1">{e.username}</span>
+                                                                </motion.div>
+                                                            ))}
+                                                        </AnimatePresence>
+                                                    </div>
+
+                                                    {/* Emote Buttons */}
+                                                    <div className="flex justify-center gap-2 mb-6">
+                                                        {['🔥', '👏', '🎉', '💀', '🎯', '❤️'].map((emote) => (
+                                                            <button
+                                                                key={emote}
+                                                                onClick={() => handleSendEmote(emote)}
+                                                                className="w-10 h-10 rounded-full bg-white/10 hover:bg-white/20 flex items-center justify-center text-lg transition-all hover:scale-110 active:scale-95"
+                                                            >
+                                                                {emote}
+                                                            </button>
+                                                        ))}
+                                                    </div>
+
+                                                    {/* Edit Profile */}
+                                                    <div className="mb-6">
+                                                        {editingProfile ? (
+                                                            <div className="flex items-center gap-2 max-w-xs mx-auto">
+                                                                <Input
+                                                                    value={editUsername}
+                                                                    onChange={(e) => setEditUsername(e.target.value)}
+                                                                    placeholder="New username"
+                                                                    className="text-center"
+                                                                />
+                                                                <Button size="sm" onClick={handleSaveProfile}>
+                                                                    <Save className="w-4 h-4" />
+                                                                </Button>
+                                                            </div>
+                                                        ) : (
+                                                            <button
+                                                                onClick={() => {
+                                                                    setEditingProfile(true);
+                                                                    setEditUsername('');
+                                                                }}
+                                                                className="text-sm text-white/40 hover:text-white/60 flex items-center gap-1 mx-auto transition-colors"
+                                                            >
+                                                                <Pencil className="w-3 h-3" />
+                                                                Edit Username
+                                                            </button>
+                                                        )}
+                                                    </div>
+
+                                                    {/* Share Link (if allowed) */}
+                                                    {giveaway.allow_sharing && (
+                                                        <div className="mb-6">
+                                                            <Button
+                                                                variant="outline"
+                                                                size="sm"
+                                                                onClick={handleShare}
+                                                                className="mx-auto flex items-center gap-2"
+                                                            >
+                                                                <Share2 className="w-4 h-4" />
+                                                                Share Event
+                                                            </Button>
+                                                        </div>
+                                                    )}
+
+                                                    {/* Lobby Participant List */}
+                                                    <div>
+                                                        <h4 className="text-sm font-bold text-white/60 mb-3 flex items-center gap-2">
+                                                            <Users className="w-4 h-4" />
+                                                            <span className="text-green-400">🟢 {lobbyParticipants.length}</span> players in lobby
+                                                        </h4>
+                                                        <div className="space-y-2 max-h-[250px] overflow-y-auto pr-1">
+                                                            {lobbyParticipants.map((p, i) => (
+                                                                <motion.div
+                                                                    key={p.id}
+                                                                    initial={{ opacity: 0, x: -20 }}
+                                                                    animate={{ opacity: 1, x: 0 }}
+                                                                    transition={{ delay: i * 0.03 }}
+                                                                    className="flex items-center gap-3 p-2 rounded-lg bg-white/5"
+                                                                >
+                                                                    <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center text-xs font-bold">
+                                                                        {p.user?.avatar_url ? (
+                                                                            <img src={p.user.avatar_url} alt="" className="w-8 h-8 rounded-full" />
+                                                                        ) : (
+                                                                            (p.user?.username?.[0] || '?').toUpperCase()
+                                                                        )}
+                                                                    </div>
+                                                                    <span className="text-sm font-medium">
+                                                                        {p.user?.display_name || p.user?.username || 'Player'}
+                                                                        {p.user_id === currentUserId && (
+                                                                            <span className="text-xs text-primary ml-1">(you)</span>
+                                                                        )}
+                                                                    </span>
+                                                                </motion.div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                </div>
                                             )}
-                                        </div>
+                                        </>
                                     )}
                                 </motion.div>
                             )}

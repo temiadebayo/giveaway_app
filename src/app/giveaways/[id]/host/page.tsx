@@ -25,7 +25,12 @@ import {
     X,
     Award,
     Zap,
-    CheckCircle2
+    CheckCircle2,
+    Rocket,
+    Share2,
+    Copy,
+    Check,
+    Link as LinkIcon
 } from "lucide-react";
 import logoWhite from "@/assets/logo_white.png";
 
@@ -43,6 +48,9 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
     const [timeLeft, setTimeLeft] = useState<number | null>(null);
     const [selectedPlayer, setSelectedPlayer] = useState<Participant | null>(null);
     const [isEnding, setIsEnding] = useState(false);
+    const [isStarting, setIsStarting] = useState(false);
+    const [copied, setCopied] = useState(false);
+    const [scheduledCountdown, setScheduledCountdown] = useState<number | null>(null);
 
     const loadData = useCallback(async () => {
         const supabase = createClient();
@@ -58,16 +66,27 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
         }
         setIsHost(true);
 
-        const participantsData = await giveawayService.getLeaderboard(id);
-        setParticipants(participantsData);
+        // During lobby, get lobby participants; during live/ended, get leaderboard
+        if (giveawayData?.status === 'scheduled') {
+            const lobbyData = await giveawayService.getLobbyParticipants(id);
+            setParticipants(lobbyData);
+        } else {
+            const leaderboardData = await giveawayService.getCombinedLeaderboard(id);
+            setParticipants(leaderboardData);
+        }
         setLoading(false);
     }, [id, router]);
 
     useEffect(() => {
         loadData();
 
-        // Real-time updates
-        const channel = giveawayService.subscribeToLeaderboard(id, (newParticipants) => {
+        // Subscribe to lobby participants (for scheduled/lobby phase)
+        const lobbyChannel = giveawayService.subscribeToLobby(id, (newParticipants) => {
+            setParticipants(newParticipants);
+        });
+
+        // Subscribe to leaderboard updates (for live phase)
+        const leaderboardChannel = giveawayService.subscribeToLeaderboard(id, (newParticipants) => {
             setParticipants(newParticipants);
         });
 
@@ -90,12 +109,13 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
             .subscribe();
 
         return () => {
-            channel.unsubscribe();
+            lobbyChannel.unsubscribe();
+            leaderboardChannel.unsubscribe();
             statusChannel.unsubscribe();
         };
     }, [id, loadData]);
 
-    // Countdown timer
+    // Countdown timer for live giveaway end
     useEffect(() => {
         if (!giveaway?.ends_at || giveaway.status === 'ended') {
             setTimeLeft(null);
@@ -109,21 +129,61 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
             setTimeLeft(diff);
         };
 
-        updateTimer(); // Initial call
+        updateTimer();
         const interval = setInterval(updateTimer, 1000);
         return () => clearInterval(interval);
     }, [giveaway?.ends_at, giveaway?.status]);
 
+    // Countdown timer for scheduled auto-start
+    useEffect(() => {
+        if (!giveaway?.scheduled_start_at || giveaway.status !== 'scheduled') {
+            setScheduledCountdown(null);
+            return;
+        }
+
+        const updateTimer = () => {
+            const now = new Date().getTime();
+            const start = new Date(giveaway.scheduled_start_at!).getTime();
+            const diff = Math.max(0, Math.floor((start - now) / 1000));
+            setScheduledCountdown(diff);
+
+            // Auto-start when countdown reaches 0
+            if (diff <= 0) {
+                handleStartEvent();
+            }
+        };
+
+        updateTimer();
+        const interval = setInterval(updateTimer, 1000);
+        return () => clearInterval(interval);
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, [giveaway?.scheduled_start_at, giveaway?.status]);
+
+    const handleStartEvent = async () => {
+        if (!giveaway || isStarting) return;
+        setIsStarting(true);
+        const result = await giveawayService.startGiveaway(id);
+        if (result.success) {
+            await loadData();
+        }
+        setIsStarting(false);
+    };
+
     const handleEndGiveaway = async () => {
         if (!giveaway || isEnding) return;
-
         setIsEnding(true);
         const result = await walletService.completeGiveaway(id);
-
         if (result.success) {
             await loadData();
         }
         setIsEnding(false);
+    };
+
+    const handleCopyLink = () => {
+        const url = giveawayService.getShareUrl(id);
+        navigator.clipboard.writeText(url);
+        setCopied(true);
+        setTimeout(() => setCopied(false), 2000);
     };
 
     const formatPrize = (amount: number, currency: string = 'USD') => {
@@ -138,6 +198,15 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
         const mins = Math.floor(seconds / 60);
         const secs = seconds % 60;
         return `${mins}:${secs.toString().padStart(2, '0')}`;
+    };
+
+    const formatScheduledCountdown = (seconds: number) => {
+        const hrs = Math.floor(seconds / 3600);
+        const mins = Math.floor((seconds % 3600) / 60);
+        const secs = seconds % 60;
+        if (hrs > 0) return `${hrs}h ${mins}m ${secs}s`;
+        if (mins > 0) return `${mins}m ${secs}s`;
+        return `${secs}s`;
     };
 
     const completedCount = participants.filter(p => p.completed_at).length;
@@ -165,6 +234,7 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
         );
     }
 
+    const isLobby = giveaway.status === 'scheduled';
     const isLive = giveaway.status === 'live';
     const isEnded = giveaway.status === 'ended';
 
@@ -181,6 +251,11 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                         <span className="px-3 py-1 rounded-full bg-yellow-500/20 text-yellow-400 text-sm font-bold flex items-center gap-1">
                             <Eye className="w-4 h-4" /> Host View
                         </span>
+                        {isLobby && (
+                            <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-sm font-bold animate-pulse">
+                                🔵 LOBBY
+                            </span>
+                        )}
                         {isLive && timeLeft !== null && (
                             <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${timeLeft < 30 ? 'bg-red-500/20' : 'bg-white/10'}`}>
                                 <Timer className={`w-4 h-4 ${timeLeft < 30 ? 'text-red-400' : 'text-yellow-400'}`} />
@@ -212,7 +287,7 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                 </Link>
 
                 <div className="grid lg:grid-cols-3 gap-6">
-                    {/* Main - Stats & Participants */}
+                    {/* Main Content */}
                     <div className="lg:col-span-2 space-y-6">
                         {/* Header Stats */}
                         <motion.div
@@ -230,19 +305,80 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                             <div className="card-premium p-4 text-center">
                                 <Users className="w-6 h-6 mx-auto mb-2 text-blue-400" />
                                 <p className="text-2xl font-black">{participants.length}</p>
-                                <p className="text-xs text-white/40">Players</p>
+                                <p className="text-xs text-white/40">{isLobby ? 'In Lobby' : 'Players'}</p>
                             </div>
                             <div className="card-premium p-4 text-center">
-                                <Zap className="w-6 h-6 mx-auto mb-2 text-green-400" />
-                                <p className="text-2xl font-black">{completedCount}</p>
-                                <p className="text-xs text-white/40">Completed</p>
+                                <Clock className="w-6 h-6 mx-auto mb-2 text-cyan-400" />
+                                <p className="text-2xl font-black">{giveaway.game_duration_seconds}s</p>
+                                <p className="text-xs text-white/40">Duration</p>
                             </div>
                             <div className="card-premium p-4 text-center">
-                                <TrendingUp className="w-6 h-6 mx-auto mb-2 text-purple-400" />
-                                <p className="text-2xl font-black">{leader?.score?.toLocaleString() || 0}</p>
-                                <p className="text-xs text-white/40">Top Score</p>
+                                {isLobby ? (
+                                    <>
+                                        <Shield className="w-6 h-6 mx-auto mb-2 text-purple-400" />
+                                        <p className="text-2xl font-black capitalize">{giveaway.min_trust_tier}</p>
+                                        <p className="text-xs text-white/40">Min Trust</p>
+                                    </>
+                                ) : (
+                                    <>
+                                        <TrendingUp className="w-6 h-6 mx-auto mb-2 text-purple-400" />
+                                        <p className="text-2xl font-black">{leader?.score?.toLocaleString() || 0}</p>
+                                        <p className="text-xs text-white/40">Top Score</p>
+                                    </>
+                                )}
                             </div>
                         </motion.div>
+
+                        {/* LOBBY: START EVENT Section */}
+                        {isLobby && (
+                            <motion.div
+                                initial={{ opacity: 0, scale: 0.95 }}
+                                animate={{ opacity: 1, scale: 1 }}
+                                className="card-premium p-8 text-center bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-2 border-blue-500/20"
+                            >
+                                <Rocket className="w-16 h-16 mx-auto mb-4 text-blue-400" />
+                                <h2 className="text-2xl font-black mb-2">Event Lobby</h2>
+                                <p className="text-white/60 mb-6">
+                                    {participants.length === 0
+                                        ? 'Share the event link and wait for players to join'
+                                        : `${participants.length} player${participants.length !== 1 ? 's' : ''} waiting in the lobby`
+                                    }
+                                </p>
+
+                                {scheduledCountdown !== null && scheduledCountdown > 0 && (
+                                    <div className="mb-6">
+                                        <p className="text-white/40 text-sm mb-1">Auto-starts in</p>
+                                        <p className="text-3xl font-mono font-black text-blue-400">
+                                            {formatScheduledCountdown(scheduledCountdown)}
+                                        </p>
+                                    </div>
+                                )}
+
+                                <Button
+                                    onClick={handleStartEvent}
+                                    disabled={isStarting || participants.length === 0}
+                                    className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg px-12 py-6 rounded-xl shadow-lg shadow-green-500/20"
+                                >
+                                    {isStarting ? (
+                                        <>
+                                            <Loader2 className="w-6 h-6 animate-spin mr-3" />
+                                            Starting...
+                                        </>
+                                    ) : (
+                                        <>
+                                            <Rocket className="w-6 h-6 mr-3" />
+                                            🚀 START EVENT
+                                        </>
+                                    )}
+                                </Button>
+
+                                {participants.length === 0 && (
+                                    <p className="text-white/30 text-sm mt-3">
+                                        Need at least 1 player to start
+                                    </p>
+                                )}
+                            </motion.div>
+                        )}
 
                         {/* Winner Display */}
                         {isEnded && winner && (
@@ -269,7 +405,7 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                             </motion.div>
                         )}
 
-                        {/* Live Participant List */}
+                        {/* Participant List */}
                         <motion.div
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
@@ -279,7 +415,7 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-lg font-bold flex items-center gap-2">
                                     <Users className="w-5 h-5 text-primary" />
-                                    Live Participants
+                                    {isLobby ? 'Lobby Participants' : 'Live Participants'}
                                 </h3>
                                 <button
                                     onClick={loadData}
@@ -293,7 +429,7 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                                 <div className="text-center py-12">
                                     <Users className="w-12 h-12 mx-auto mb-3 text-white/20" />
                                     <p className="text-white/40">No participants yet</p>
-                                    <p className="text-sm text-white/20">Waiting for players to join...</p>
+                                    <p className="text-sm text-white/20">Share the link to invite players</p>
                                 </div>
                             ) : (
                                 <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
@@ -311,13 +447,14 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                                             `}
                                         >
                                             <div className="flex items-center gap-3">
-                                                {/* Rank */}
+                                                {/* Rank / Number */}
                                                 <div className={`
                                                     w-8 h-8 rounded-full flex items-center justify-center text-sm font-bold
-                                                    ${index === 0 ? 'bg-yellow-500 text-black' :
-                                                        index === 1 ? 'bg-gray-300 text-black' :
-                                                            index === 2 ? 'bg-orange-600 text-white' :
-                                                                'bg-white/10 text-white/60'}
+                                                    ${isLobby ? 'bg-blue-500/20 text-blue-400' :
+                                                        index === 0 ? 'bg-yellow-500 text-black' :
+                                                            index === 1 ? 'bg-gray-300 text-black' :
+                                                                index === 2 ? 'bg-orange-600 text-white' :
+                                                                    'bg-white/10 text-white/60'}
                                                 `}>
                                                     {index + 1}
                                                 </div>
@@ -344,7 +481,9 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                                                         {participant.is_winner && <Award className="w-4 h-4 text-yellow-400" />}
                                                     </p>
                                                     <p className="text-xs text-white/40">
-                                                        {participant.completed_at ? (
+                                                        {isLobby ? (
+                                                            <span className="text-blue-400">● In lobby</span>
+                                                        ) : participant.completed_at ? (
                                                             <span className="text-green-400">✓ Completed</span>
                                                         ) : (
                                                             <span className="text-blue-400">● Playing...</span>
@@ -353,11 +492,13 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                                                 </div>
                                             </div>
 
-                                            {/* Score */}
-                                            <div className="text-right">
-                                                <p className="text-lg font-bold">{participant.score.toLocaleString()}</p>
-                                                <p className="text-xs text-white/40">{participant.taps || 0} taps</p>
-                                            </div>
+                                            {/* Score (only during live/ended) */}
+                                            {!isLobby && (
+                                                <div className="text-right">
+                                                    <p className="text-lg font-bold">{participant.score.toLocaleString()}</p>
+                                                    <p className="text-xs text-white/40">{participant.taps || 0} taps</p>
+                                                </div>
+                                            )}
                                         </motion.button>
                                     ))}
                                 </div>
@@ -388,8 +529,9 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                         )}
                     </div>
 
-                    {/* Sidebar - Giveaway Info */}
+                    {/* Sidebar */}
                     <div className="space-y-6">
+                        {/* Giveaway Info */}
                         <motion.div
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
@@ -414,29 +556,66 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                                 </div>
                                 <div className="flex justify-between text-sm">
                                     <span className="text-white/60">Status</span>
-                                    <span className={`font-bold ${isLive ? 'text-green-400' : 'text-white/60'}`}>
+                                    <span className={`font-bold ${isLobby ? 'text-blue-400' :
+                                            isLive ? 'text-green-400' :
+                                                'text-white/60'
+                                        }`}>
                                         {giveaway.status.toUpperCase()}
+                                    </span>
+                                </div>
+                                <div className="flex justify-between text-sm">
+                                    <span className="text-white/60">Sharing</span>
+                                    <span className={`font-bold ${giveaway.allow_sharing ? 'text-green-400' : 'text-red-400'}`}>
+                                        {giveaway.allow_sharing ? 'Enabled' : 'Disabled'}
                                     </span>
                                 </div>
                             </div>
                         </motion.div>
 
-                        {/* Quick Stats */}
+                        {/* Share Link */}
                         <motion.div
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.1 }}
-                            className="card-premium p-4"
+                            className="card-premium p-6"
                         >
-                            <div className="text-center">
-                                <p className="text-white/40 text-sm">Completion Rate</p>
-                                <p className="text-3xl font-black text-gradient-primary">
-                                    {participants.length > 0
-                                        ? Math.round((completedCount / participants.length) * 100)
-                                        : 0}%
-                                </p>
+                            <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
+                                <LinkIcon className="w-4 h-4 text-primary" />
+                                Event Link
+                            </h3>
+                            <div className="flex gap-2">
+                                <div className="flex-1 px-3 py-2 rounded-lg bg-white/5 text-white/60 text-sm truncate">
+                                    {giveawayService.getShareUrl(id)}
+                                </div>
+                                <Button
+                                    onClick={handleCopyLink}
+                                    size="sm"
+                                    variant="outline"
+                                    className="shrink-0"
+                                >
+                                    {copied ? <Check className="w-4 h-4 text-green-400" /> : <Copy className="w-4 h-4" />}
+                                </Button>
                             </div>
                         </motion.div>
+
+                        {/* Stats */}
+                        {!isLobby && (
+                            <motion.div
+                                initial={{ opacity: 0, x: 20 }}
+                                animate={{ opacity: 1, x: 0 }}
+                                transition={{ delay: 0.2 }}
+                                className="card-premium p-4"
+                            >
+                                <div className="text-center">
+                                    <p className="text-white/40 text-sm">Completion Rate</p>
+                                    <p className="text-3xl font-black text-gradient-primary">
+                                        {participants.length > 0
+                                            ? Math.round((completedCount / participants.length) * 100)
+                                            : 0}%
+                                    </p>
+                                </div>
+                            </motion.div>
+                        )}
                     </div>
                 </div>
             </div>
@@ -515,7 +694,7 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                                 <div className="flex justify-between">
                                     <span className="text-white/60">Status</span>
                                     <span className={selectedPlayer.completed_at ? 'text-green-400' : 'text-blue-400'}>
-                                        {selectedPlayer.completed_at ? 'Completed' : 'Playing'}
+                                        {isLobby ? 'In Lobby' : selectedPlayer.completed_at ? 'Completed' : 'Playing'}
                                     </span>
                                 </div>
                             </div>

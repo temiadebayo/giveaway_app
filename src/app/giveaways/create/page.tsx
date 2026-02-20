@@ -25,7 +25,8 @@ import {
     Users,
     Shield,
     Wallet as WalletIcon,
-    AlertCircle
+    AlertCircle,
+    Share2
 } from "lucide-react";
 
 // Preset tiers (in dollars)
@@ -90,6 +91,7 @@ export default function CreateGiveawayPage() {
     const [loadingWallet, setLoadingWallet] = useState(true);
     const [error, setError] = useState<string | null>(null);
     const [wallet, setWallet] = useState<Wallet | null>(null);
+    const [allowSharing, setAllowSharing] = useState(true);
 
     // Advanced mode form
     const [form, setForm] = useState({
@@ -136,11 +138,12 @@ export default function CreateGiveawayPage() {
             duration_seconds: 30,
             min_trust_tier: 'bronze',
             max_participants: 1000,
-            scheduled_start: null, // Go live immediately
+            scheduled_start: null,
+            allow_sharing: allowSharing,
         });
 
         if (result.success && result.giveaway_id) {
-            router.push(`/giveaways/${result.giveaway_id}`);
+            router.push(`/giveaways/${result.giveaway_id}/host`);
         } else {
             if (result.error?.includes('Insufficient balance')) {
                 setError(`Insufficient balance. You have $${result.balance?.toLocaleString() || 0}, need $${result.required?.toLocaleString() || amount}`);
@@ -174,10 +177,11 @@ export default function CreateGiveawayPage() {
             min_trust_tier: form.min_trust_tier,
             max_participants: form.max_participants,
             scheduled_start: null,
+            allow_sharing: allowSharing,
         });
 
         if (result.success && result.giveaway_id) {
-            router.push(`/giveaways/${result.giveaway_id}`);
+            router.push(`/giveaways/${result.giveaway_id}/host`);
         } else {
             setError(result.error || 'Failed to create giveaway');
             setLoading(false);
@@ -539,6 +543,34 @@ export default function CreateGiveawayPage() {
                                     value={form.max_participants}
                                     onChange={(e) => setForm({ ...form, max_participants: Number(e.target.value) })}
                                 />
+                            </div>
+
+                            {/* Allow Sharing Toggle */}
+                            <div className="card-premium p-6">
+                                <div className="flex items-center justify-between">
+                                    <div>
+                                        <label className="font-medium flex items-center gap-2">
+                                            <Share2 className="w-4 h-4 text-green-400" />
+                                            Allow Participants to Share
+                                        </label>
+                                        <p className="text-xs text-white/40 mt-1">
+                                            Let players share the event link with others
+                                        </p>
+                                    </div>
+                                    <button
+                                        type="button"
+                                        onClick={() => setAllowSharing(!allowSharing)}
+                                        className={`
+                                            relative w-12 h-7 rounded-full transition-colors duration-200
+                                            ${allowSharing ? 'bg-green-500' : 'bg-white/20'}
+                                        `}
+                                    >
+                                        <span className={`
+                                            absolute top-0.5 left-0.5 w-6 h-6 rounded-full bg-white transition-transform duration-200
+                                            ${allowSharing ? 'translate-x-5' : 'translate-x-0'}
+                                        `} />
+                                    </button>
+                                </div>
                             </div>
 
                             {/* Error */}

@@ -22,6 +22,8 @@ export interface Giveaway {
     status: 'draft' | 'scheduled' | 'live' | 'ended' | 'cancelled';
     starts_at: string | null;
     ends_at: string | null;
+    scheduled_start_at: string | null;
+    allow_sharing: boolean;
     winner_id: string | null;
     winning_score: number | null;
     created_at: string;
@@ -430,20 +432,18 @@ class GiveawayService {
     }
 
     /**
-     * Start a giveaway (for hosts)
+     * Start a giveaway event (for hosts) — triggers lobby → live transition
      */
     async startGiveaway(giveawayId: string): Promise<{ success: boolean; error?: string }> {
-        const { error } = await this.supabase
-            .from('giveaways')
-            .update({
-                status: 'live',
-                starts_at: new Date().toISOString(),
-                updated_at: new Date().toISOString(),
-            })
-            .eq('id', giveawayId);
+        const { data, error } = await this.supabase
+            .rpc('start_giveaway_event', { p_giveaway_id: giveawayId });
 
         if (error) {
             return { success: false, error: error.message };
+        }
+
+        if (data && !data.success) {
+            return { success: false, error: data.error };
         }
 
         return { success: true };
@@ -694,6 +694,89 @@ class GiveawayService {
      * Get giveaway by share code
      */
 
+    /**
+     * Get all participants in the lobby (for lobby view)
+     */
+    async getLobbyParticipants(giveawayId: string): Promise<Participant[]> {
+        const { data, error } = await this.supabase
+            .from('giveaway_participants')
+            .select(`
+                *,
+                user:profiles!user_id(username, display_name, avatar_url, trust_tier)
+            `)
+            .eq('giveaway_id', giveawayId)
+            .order('joined_at', { ascending: true });
+
+        if (error) {
+            console.error('Error fetching lobby participants:', error);
+            return [];
+        }
+
+        return (data || []).map((p: any) => ({
+            ...p,
+            user: p.user,
+        }));
+    }
+
+    /**
+     * Subscribe to lobby participant changes (joins)
+     */
+    subscribeToLobby(
+        giveawayId: string,
+        callback: (participants: Participant[]) => void
+    ) {
+        const channel = this.supabase
+            .channel(`lobby:${giveawayId}`)
+            .on(
+                'postgres_changes',
+                {
+                    event: 'INSERT',
+                    schema: 'public',
+                    table: 'giveaway_participants',
+                    filter: `giveaway_id=eq.${giveawayId}`
+                },
+                async () => {
+                    // Refetch full participant list with profiles
+                    const participants = await this.getLobbyParticipants(giveawayId);
+                    callback(participants);
+                }
+            )
+            .subscribe();
+
+        return channel;
+    }
+
+    /**
+     * Send an emote to the lobby via Supabase Realtime broadcast
+     */
+    async sendLobbyEmote(giveawayId: string, emote: string, username: string) {
+        const channel = this.supabase.channel(`lobby-emotes:${giveawayId}`);
+        await channel.subscribe();
+        await channel.send({
+            type: 'broadcast',
+            event: 'emote',
+            payload: { emote, username, timestamp: Date.now() }
+        });
+        // Unsubscribe after sending
+        setTimeout(() => channel.unsubscribe(), 1000);
+    }
+
+    /**
+     * Subscribe to lobby emotes
+     */
+    subscribeToLobbyEmotes(
+        giveawayId: string,
+        callback: (emote: { emote: string; username: string; timestamp: number }) => void
+    ) {
+        const channel = this.supabase
+            .channel(`lobby-emotes:${giveawayId}`)
+            .on('broadcast', { event: 'emote' }, (payload) => {
+                callback(payload.payload as any);
+            })
+            .subscribe();
+
+        return channel;
+    }
 }
 
 export interface GuestParticipant {
