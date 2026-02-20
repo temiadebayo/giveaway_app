@@ -66,7 +66,7 @@ export default function TrustScorePage() {
     return (
         <main className="min-h-screen bg-aurora overflow-x-hidden">
             {/* Navbar */}
-            <nav className="sticky top-0 z-50 px-6 py-4 glass">
+            <nav className="sticky top-0 z-50 px-3 sm:px-6 py-3 sm:py-4 glass">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <Link href="/dashboard" className="flex items-center gap-3">
                         <Image src={logoWhite} alt="Giveaway" width={36} height={36} />
@@ -83,7 +83,7 @@ export default function TrustScorePage() {
                 </div>
             </nav>
 
-            <div className="max-w-7xl mx-auto p-6">
+            <div className="max-w-7xl mx-auto px-3 py-4 sm:p-6">
                 {/* Back button */}
                 <Link
                     href="/dashboard"

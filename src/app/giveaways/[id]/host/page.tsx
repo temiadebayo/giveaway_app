@@ -242,89 +242,89 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
     return (
         <main className="min-h-screen bg-aurora overflow-x-hidden">
             {/* Navbar */}
-            <nav className="sticky top-0 z-50 px-6 py-4 glass">
+            <nav className="sticky top-0 z-50 px-3 sm:px-6 py-3 sm:py-4 glass">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
-                    <Link href="/giveaways" className="flex items-center gap-3">
-                        <Image src={logoWhite} alt="Giveaway" width={36} height={36} />
+                    <Link href="/giveaways" className="flex items-center gap-2 shrink-0">
+                        <Image src={logoWhite} alt="Giveaway" width={28} height={28} className="sm:w-9 sm:h-9" />
                         <span className="font-bold text-lg hidden sm:inline">GIVEAWAY</span>
                     </Link>
-                    <div className="flex items-center gap-3">
-                        <span className="px-3 py-1 rounded-full bg-yellow-500/20 text-yellow-400 text-sm font-bold flex items-center gap-1">
-                            <Eye className="w-4 h-4" /> Host View
+                    <div className="flex items-center gap-1.5 sm:gap-3 flex-wrap justify-end">
+                        <span className="px-2 sm:px-3 py-1 rounded-full bg-yellow-500/20 text-yellow-400 text-xs sm:text-sm font-bold flex items-center gap-1">
+                            <Eye className="w-3 h-3 sm:w-4 sm:h-4" /> Host
                         </span>
                         {isLobby && (
-                            <span className="px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-sm font-bold animate-pulse">
+                            <span className="px-2 sm:px-3 py-1 rounded-full bg-blue-500/20 text-blue-400 text-xs sm:text-sm font-bold animate-pulse">
                                 🔵 LOBBY
                             </span>
                         )}
                         {isLive && timeLeft !== null && (
-                            <div className={`flex items-center gap-2 px-3 py-2 rounded-lg ${timeLeft < 30 ? 'bg-red-500/20' : 'bg-white/10'}`}>
-                                <Timer className={`w-4 h-4 ${timeLeft < 30 ? 'text-red-400' : 'text-yellow-400'}`} />
-                                <span className="font-mono font-bold text-lg">{formatTime(timeLeft)}</span>
+                            <div className={`flex items-center gap-1.5 px-2 sm:px-3 py-1 sm:py-2 rounded-lg ${timeLeft < 30 ? 'bg-red-500/20' : 'bg-white/10'}`}>
+                                <Timer className={`w-3 h-3 sm:w-4 sm:h-4 ${timeLeft < 30 ? 'text-red-400' : 'text-yellow-400'}`} />
+                                <span className="font-mono font-bold text-sm sm:text-lg">{formatTime(timeLeft)}</span>
                             </div>
                         )}
                         {isLive && (
-                            <span className="px-3 py-1 rounded-full bg-red-500 text-sm font-bold animate-pulse">
+                            <span className="px-2 sm:px-3 py-1 rounded-full bg-red-500 text-xs sm:text-sm font-bold animate-pulse">
                                 🔴 LIVE
                             </span>
                         )}
                         {isEnded && (
-                            <span className="px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-sm font-bold flex items-center gap-1">
-                                <CheckCircle2 className="w-4 h-4" /> ENDED
+                            <span className="px-2 sm:px-3 py-1 rounded-full bg-green-500/20 text-green-400 text-xs sm:text-sm font-bold flex items-center gap-1">
+                                <CheckCircle2 className="w-3 h-3 sm:w-4 sm:h-4" /> ENDED
                             </span>
                         )}
                     </div>
                 </div>
             </nav>
 
-            <div className="max-w-7xl mx-auto p-4 md:p-6">
+            <div className="max-w-7xl mx-auto px-3 sm:px-4 md:px-6 py-4 md:py-6">
                 {/* Back */}
                 <Link
                     href="/giveaways"
-                    className="inline-flex items-center gap-2 text-white/60 hover:text-white mb-6 transition-colors"
+                    className="inline-flex items-center gap-2 text-white/60 hover:text-white mb-4 sm:mb-6 transition-colors text-sm"
                 >
                     <ArrowLeft className="w-4 h-4" />
                     Back to Giveaways
                 </Link>
 
-                <div className="grid lg:grid-cols-3 gap-6">
+                <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
                     {/* Main Content */}
-                    <div className="lg:col-span-2 space-y-6">
+                    <div className="lg:col-span-2 space-y-4 sm:space-y-6">
                         {/* Header Stats */}
                         <motion.div
                             initial={{ opacity: 0, y: -20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="grid grid-cols-2 md:grid-cols-4 gap-4"
+                            className="grid grid-cols-2 sm:grid-cols-4 gap-2 sm:gap-4"
                         >
-                            <div className="card-premium p-4 text-center">
-                                <Trophy className="w-6 h-6 mx-auto mb-2 text-yellow-400" />
-                                <p className="text-2xl font-black text-gradient-primary">
+                            <div className="card-premium p-3 sm:p-4 text-center">
+                                <Trophy className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1.5 sm:mb-2 text-yellow-400" />
+                                <p className="text-lg sm:text-2xl font-black text-gradient-primary">
                                     {formatPrize(giveaway.prize_amount)}
                                 </p>
-                                <p className="text-xs text-white/40">Prize</p>
+                                <p className="text-[10px] sm:text-xs text-white/40">Prize</p>
                             </div>
-                            <div className="card-premium p-4 text-center">
-                                <Users className="w-6 h-6 mx-auto mb-2 text-blue-400" />
-                                <p className="text-2xl font-black">{participants.length}</p>
-                                <p className="text-xs text-white/40">{isLobby ? 'In Lobby' : 'Players'}</p>
+                            <div className="card-premium p-3 sm:p-4 text-center">
+                                <Users className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1.5 sm:mb-2 text-blue-400" />
+                                <p className="text-lg sm:text-2xl font-black">{participants.length}</p>
+                                <p className="text-[10px] sm:text-xs text-white/40">{isLobby ? 'In Lobby' : 'Players'}</p>
                             </div>
-                            <div className="card-premium p-4 text-center">
-                                <Clock className="w-6 h-6 mx-auto mb-2 text-cyan-400" />
-                                <p className="text-2xl font-black">{giveaway.game_duration_seconds}s</p>
-                                <p className="text-xs text-white/40">Duration</p>
+                            <div className="card-premium p-3 sm:p-4 text-center">
+                                <Clock className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1.5 sm:mb-2 text-cyan-400" />
+                                <p className="text-lg sm:text-2xl font-black">{giveaway.game_duration_seconds}s</p>
+                                <p className="text-[10px] sm:text-xs text-white/40">Duration</p>
                             </div>
-                            <div className="card-premium p-4 text-center">
+                            <div className="card-premium p-3 sm:p-4 text-center">
                                 {isLobby ? (
                                     <>
-                                        <Shield className="w-6 h-6 mx-auto mb-2 text-purple-400" />
-                                        <p className="text-2xl font-black capitalize">{giveaway.min_trust_tier}</p>
-                                        <p className="text-xs text-white/40">Min Trust</p>
+                                        <Shield className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1.5 sm:mb-2 text-purple-400" />
+                                        <p className="text-lg sm:text-2xl font-black capitalize">{giveaway.min_trust_tier}</p>
+                                        <p className="text-[10px] sm:text-xs text-white/40">Min Trust</p>
                                     </>
                                 ) : (
                                     <>
-                                        <TrendingUp className="w-6 h-6 mx-auto mb-2 text-purple-400" />
-                                        <p className="text-2xl font-black">{leader?.score?.toLocaleString() || 0}</p>
-                                        <p className="text-xs text-white/40">Top Score</p>
+                                        <TrendingUp className="w-5 h-5 sm:w-6 sm:h-6 mx-auto mb-1.5 sm:mb-2 text-purple-400" />
+                                        <p className="text-lg sm:text-2xl font-black">{leader?.score?.toLocaleString() || 0}</p>
+                                        <p className="text-[10px] sm:text-xs text-white/40">Top Score</p>
                                     </>
                                 )}
                             </div>
@@ -335,11 +335,11 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                             <motion.div
                                 initial={{ opacity: 0, scale: 0.95 }}
                                 animate={{ opacity: 1, scale: 1 }}
-                                className="card-premium p-8 text-center bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-2 border-blue-500/20"
+                                className="card-premium p-5 sm:p-8 text-center bg-gradient-to-r from-blue-500/10 to-purple-500/10 border-2 border-blue-500/20"
                             >
-                                <Rocket className="w-16 h-16 mx-auto mb-4 text-blue-400" />
-                                <h2 className="text-2xl font-black mb-2">Event Lobby</h2>
-                                <p className="text-white/60 mb-6">
+                                <Rocket className="w-10 h-10 sm:w-16 sm:h-16 mx-auto mb-3 sm:mb-4 text-blue-400" />
+                                <h2 className="text-xl sm:text-2xl font-black mb-2">Event Lobby</h2>
+                                <p className="text-white/60 text-sm sm:text-base mb-4 sm:mb-6">
                                     {participants.length === 0
                                         ? 'Share the event link and wait for players to join'
                                         : `${participants.length} player${participants.length !== 1 ? 's' : ''} waiting in the lobby`
@@ -347,9 +347,9 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                                 </p>
 
                                 {scheduledCountdown !== null && scheduledCountdown > 0 && (
-                                    <div className="mb-6">
-                                        <p className="text-white/40 text-sm mb-1">Auto-starts in</p>
-                                        <p className="text-3xl font-mono font-black text-blue-400">
+                                    <div className="mb-4 sm:mb-6">
+                                        <p className="text-white/40 text-xs sm:text-sm mb-1">Auto-starts in</p>
+                                        <p className="text-2xl sm:text-3xl font-mono font-black text-blue-400">
                                             {formatScheduledCountdown(scheduledCountdown)}
                                         </p>
                                     </div>
@@ -358,23 +358,23 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                                 <Button
                                     onClick={handleStartEvent}
                                     disabled={isStarting || participants.length === 0}
-                                    className="bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-lg px-12 py-6 rounded-xl shadow-lg shadow-green-500/20"
+                                    className="w-full sm:w-auto bg-gradient-to-r from-green-500 to-emerald-600 hover:from-green-600 hover:to-emerald-700 text-white text-base sm:text-lg px-6 sm:px-12 py-4 sm:py-6 rounded-xl shadow-lg shadow-green-500/20"
                                 >
                                     {isStarting ? (
                                         <>
-                                            <Loader2 className="w-6 h-6 animate-spin mr-3" />
+                                            <Loader2 className="w-5 h-5 sm:w-6 sm:h-6 animate-spin mr-2 sm:mr-3" />
                                             Starting...
                                         </>
                                     ) : (
                                         <>
-                                            <Rocket className="w-6 h-6 mr-3" />
+                                            <Rocket className="w-5 h-5 sm:w-6 sm:h-6 mr-2 sm:mr-3" />
                                             🚀 START EVENT
                                         </>
                                     )}
                                 </Button>
 
                                 {participants.length === 0 && (
-                                    <p className="text-white/30 text-sm mt-3">
+                                    <p className="text-white/30 text-xs sm:text-sm mt-3">
                                         Need at least 1 player to start
                                     </p>
                                 )}
@@ -411,7 +411,7 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                             initial={{ opacity: 0, y: 20 }}
                             animate={{ opacity: 1, y: 0 }}
                             transition={{ delay: 0.1 }}
-                            className="card-premium p-6"
+                            className="card-premium p-4 sm:p-6"
                         >
                             <div className="flex items-center justify-between mb-4">
                                 <h3 className="text-lg font-bold flex items-center gap-2">
@@ -433,7 +433,7 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                                     <p className="text-sm text-white/20">Share the link to invite players</p>
                                 </div>
                             ) : (
-                                <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2">
+                                <div className="space-y-2 max-h-[300px] sm:max-h-[400px] overflow-y-auto pr-1 sm:pr-2">
                                     {participants.map((participant, index) => (
                                         <motion.button
                                             key={participant.id}
@@ -536,7 +536,7 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                         <motion.div
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
-                            className="card-premium p-6"
+                            className="card-premium p-4 sm:p-6"
                         >
                             <h3 className="text-lg font-bold mb-4">{giveaway.title}</h3>
                             {giveaway.description && (
@@ -578,7 +578,7 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                             initial={{ opacity: 0, x: 20 }}
                             animate={{ opacity: 1, x: 0 }}
                             transition={{ delay: 0.1 }}
-                            className="card-premium p-6"
+                            className="card-premium p-4 sm:p-6"
                         >
                             <h3 className="text-sm font-bold mb-3 flex items-center gap-2">
                                 <LinkIcon className="w-4 h-4 text-primary" />

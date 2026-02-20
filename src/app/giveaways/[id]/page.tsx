@@ -534,7 +534,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                 }
             />
 
-            <div className="max-w-4xl mx-auto p-4 sm:p-6">
+            <div className="max-w-4xl mx-auto px-3 py-4 sm:p-6">
                 {/* Breadcrumbs */}
                 <Breadcrumbs items={[
                     { label: 'Giveaways', href: '/giveaways' },
@@ -556,14 +556,14 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                         <motion.div
                             initial={{ opacity: 0, y: -20 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="card-premium p-6"
+                            className="card-premium p-4 sm:p-6"
                         >
                             <div className="flex items-start justify-between mb-4">
                                 <div>
-                                    <p className="text-4xl font-black text-gradient-primary mb-2">
+                                    <p className="text-3xl sm:text-4xl font-black text-gradient-primary mb-2">
                                         {formatPrize(giveaway.prize_amount, giveaway.prize_currency)}
                                     </p>
-                                    <h1 className="text-2xl font-bold">{giveaway.title}</h1>
+                                    <h1 className="text-xl sm:text-2xl font-bold">{giveaway.title}</h1>
                                 </div>
                                 {isHost && (
                                     <Link href={`/giveaways/${id}/host`}>
@@ -579,20 +579,20 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                             )}
 
                             {/* Stats */}
-                            <div className="grid grid-cols-3 gap-4">
+                            <div className="grid grid-cols-3 gap-2 sm:gap-4">
                                 <div className="p-3 rounded-xl bg-white/5 text-center">
                                     <Users className="w-5 h-5 mx-auto mb-1 text-white/40" />
-                                    <p className="text-xl font-bold">{leaderboard.length}</p>
+                                    <p className="text-lg sm:text-xl font-bold">{leaderboard.length}</p>
                                     <p className="text-xs text-white/40">Players</p>
                                 </div>
                                 <div className="p-3 rounded-xl bg-white/5 text-center">
                                     <Clock className="w-5 h-5 mx-auto mb-1 text-white/40" />
-                                    <p className="text-xl font-bold">{giveaway.game_duration_seconds}s</p>
+                                    <p className="text-lg sm:text-xl font-bold">{giveaway.game_duration_seconds}s</p>
                                     <p className="text-xs text-white/40">Game Time</p>
                                 </div>
                                 <div className="p-3 rounded-xl bg-white/5 text-center">
                                     <Shield className="w-5 h-5 mx-auto mb-1 text-white/40" />
-                                    <p className="text-xl font-bold">{tierBenefits.emoji}</p>
+                                    <p className="text-lg sm:text-xl font-bold">{tierBenefits.emoji}</p>
                                     <p className="text-xs text-white/40">Min {giveaway.min_trust_tier}</p>
                                 </div>
                             </div>
@@ -626,7 +626,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0, scale: 0.9 }}
-                                    className="card-premium p-8 text-center"
+                                    className="card-premium p-5 sm:p-8 text-center"
                                 >
                                     {isWinner ? (
                                         <>
@@ -638,8 +638,8 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                             >
                                                 <Trophy className="w-12 h-12 text-white" />
                                             </motion.div>
-                                            <h2 className="text-3xl font-black mb-2">YOU WON! 🎉</h2>
-                                            <p className="text-5xl font-black text-gradient-primary mb-4">
+                                            <h2 className="text-2xl sm:text-3xl font-black mb-2">YOU WON! 🎉</h2>
+                                            <p className="text-3xl sm:text-5xl font-black text-gradient-primary mb-4">
                                                 {formatPrize(giveaway.prize_amount, giveaway.prize_currency)}
                                             </p>
                                             <p className="text-white/60 mb-6">
@@ -658,7 +658,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                             <Crown className="w-16 h-16 mx-auto mb-4 text-yellow-400" />
                                             <h2 className="text-2xl font-bold mb-2">Giveaway Ended!</h2>
                                             <p className="text-white/60 mb-2">Winner:</p>
-                                            <p className="text-3xl font-black text-gradient-primary mb-2">
+                                            <p className="text-2xl sm:text-3xl font-black text-gradient-primary mb-2">
                                                 {winner.user?.display_name || winner.user?.username || 'Unknown'}
                                             </p>
                                             <p className="text-white/40 mb-4">
@@ -704,14 +704,14 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                 >
                                     {/* Guest gate — must sign in */}
                                     {isGuest ? (
-                                        <div className="card-premium p-8 text-center">
+                                        <div className="card-premium p-5 sm:p-8 text-center">
                                             <div className="relative w-24 h-24 mx-auto mb-6">
                                                 <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 animate-pulse" />
                                                 <div className="absolute inset-2 rounded-full bg-gray-900 flex items-center justify-center">
                                                     <LogIn className="w-10 h-10 text-blue-400" />
                                                 </div>
                                             </div>
-                                            <h3 className="text-2xl font-bold mb-2">Sign In to Join</h3>
+                                            <h3 className="text-xl sm:text-2xl font-bold mb-2">Sign In to Join</h3>
                                             <p className="text-white/60 mb-6">
                                                 You need an account to join the lobby and compete for {formatPrize(giveaway.prize_amount, giveaway.prize_currency)}!
                                             </p>
@@ -727,9 +727,9 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                         <>
                                             {/* Join CTA or In-lobby state */}
                                             {!hasJoined ? (
-                                                <div className="card-premium p-8 text-center">
+                                                <div className="card-premium p-5 sm:p-8 text-center">
                                                     <Sparkles className="w-12 h-12 mx-auto mb-4 text-primary" />
-                                                    <h3 className="text-2xl font-bold mb-2">Join the Lobby!</h3>
+                                                    <h3 className="text-xl sm:text-2xl font-bold mb-2">Join the Lobby!</h3>
                                                     <p className="text-white/60 mb-6">
                                                         Enter the lobby and wait for the host to start the event.
                                                     </p>
@@ -940,10 +940,10 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -20 }}
-                                    className="card-premium p-8 text-center"
+                                    className="card-premium p-5 sm:p-8 text-center"
                                 >
                                     <Sparkles className="w-12 h-12 mx-auto mb-4 text-primary" />
-                                    <h3 className="text-2xl font-bold mb-2">Join the Action!</h3>
+                                    <h3 className="text-xl sm:text-2xl font-bold mb-2">Join the Action!</h3>
                                     <p className="text-white/60 mb-6">
                                         Compete for {formatPrize(giveaway.prize_amount, giveaway.prize_currency)} in this skill-based challenge.
                                     </p>
@@ -1038,12 +1038,12 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -20 }}
-                                    className="card-premium p-8 text-center"
+                                    className="card-premium p-5 sm:p-8 text-center"
                                 >
                                     <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 flex items-center justify-center">
                                         <Sparkles className="w-10 h-10 text-white" />
                                     </div>
-                                    <h3 className="text-2xl font-bold mb-2">You're In! 🎮</h3>
+                                    <h3 className="text-xl sm:text-2xl font-bold mb-2">You're In! 🎮</h3>
                                     <p className="text-white/60 mb-6">
                                         {giveaway.game_duration_seconds} seconds to tap as fast as you can!
                                     </p>
@@ -1065,14 +1065,14 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                     initial={{ opacity: 0, scale: 0.5 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0, scale: 1.5 }}
-                                    className="card-premium p-8 text-center"
+                                    className="card-premium p-5 sm:p-8 text-center"
                                 >
                                     <motion.p
                                         key={countdown}
                                         initial={{ scale: 0.5, opacity: 0 }}
                                         animate={{ scale: 1, opacity: 1 }}
                                         exit={{ scale: 1.5, opacity: 0 }}
-                                        className="text-9xl font-black text-gradient-primary"
+                                        className="text-7xl sm:text-9xl font-black text-gradient-primary"
                                     >
                                         {countdown}
                                     </motion.p>
@@ -1103,7 +1103,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                     initial={{ opacity: 0, scale: 0.9 }}
                                     animate={{ opacity: 1, scale: 1 }}
                                     exit={{ opacity: 0 }}
-                                    className="card-premium p-8 text-center"
+                                    className="card-premium p-5 sm:p-8 text-center"
                                 >
                                     <motion.div
                                         initial={{ scale: 0 }}
@@ -1113,8 +1113,8 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                     >
                                         <Trophy className="w-10 h-10 text-white" />
                                     </motion.div>
-                                    <h3 className="text-2xl font-bold mb-2">Score Submitted!</h3>
-                                    <p className="text-5xl font-black text-gradient-primary mb-4">
+                                    <h3 className="text-xl sm:text-2xl font-bold mb-2">Score Submitted!</h3>
+                                    <p className="text-3xl sm:text-5xl font-black text-gradient-primary mb-4">
                                         {finalScore?.toLocaleString() || 0}
                                     </p>
                                     <Loader2 className="w-6 h-6 animate-spin mx-auto text-white/40" />
@@ -1128,13 +1128,13 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                     initial={{ opacity: 0, y: 20 }}
                                     animate={{ opacity: 1, y: 0 }}
                                     exit={{ opacity: 0, y: -20 }}
-                                    className="card-premium p-8 text-center"
+                                    className="card-premium p-5 sm:p-8 text-center"
                                 >
                                     <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
                                         <Eye className="w-10 h-10 text-white" />
                                     </div>
-                                    <h3 className="text-2xl font-bold mb-2">You're Done!</h3>
-                                    <p className="text-4xl font-black text-primary mb-2">
+                                    <h3 className="text-xl sm:text-2xl font-bold mb-2">You're Done!</h3>
+                                    <p className="text-2xl sm:text-4xl font-black text-primary mb-2">
                                         {currentScore.toLocaleString()} score
                                     </p>
                                     <p className="text-white/60 mb-4">

@@ -214,7 +214,7 @@ export default function WalletPage() {
                             <Lock className="w-4 h-4" />
                             <span className="text-sm">Held in Escrow</span>
                         </div>
-                        <p className="text-4xl font-black text-blue-400">
+                        <p className="text-3xl sm:text-4xl font-black text-blue-400">
                             {formatCurrency(wallet?.escrow_balance || 0)}
                         </p>
                         <p className="text-sm text-white/40 mt-2">

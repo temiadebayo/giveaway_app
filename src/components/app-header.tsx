@@ -17,7 +17,8 @@ import {
     X,
     Home,
     Gift,
-    Plus
+    Plus,
+    Shield
 } from "lucide-react";
 import logoWhite from "@/assets/logo_white.png";
 
@@ -223,24 +224,6 @@ export function AppHeader({
                                         )}
                                     </AnimatePresence>
                                 </div>
-
-                                {/* Mobile Avatar Only */}
-                                <button
-                                    onClick={() => setIsMobileMenuOpen(true)}
-                                    className="sm:hidden w-9 h-9 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center overflow-hidden relative"
-                                >
-                                    {profile?.avatar_url ? (
-                                        <img
-                                            src={profile.avatar_url}
-                                            alt=""
-                                            className="w-full h-full object-cover"
-                                            onError={(e) => {
-                                                (e.target as HTMLImageElement).style.display = 'none';
-                                            }}
-                                        />
-                                    ) : null}
-                                    <span className="text-xs font-bold text-white absolute">{getInitials()}</span>
-                                </button>
                             </>
                         ) : (
                             <Link
@@ -332,14 +315,7 @@ export function AppHeader({
 
                                 <hr className="border-white/10 my-4" />
 
-                                <Link
-                                    href="/wallet"
-                                    onClick={() => setIsMobileMenuOpen(false)}
-                                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/80 hover:bg-white/10 transition-colors"
-                                >
-                                    <Wallet className="w-5 h-5" />
-                                    Wallet
-                                </Link>
+                                <p className="px-4 text-xs font-semibold text-white/30 uppercase tracking-wider mb-2">Account</p>
                                 <Link
                                     href="/wins"
                                     onClick={() => setIsMobileMenuOpen(false)}
@@ -347,6 +323,14 @@ export function AppHeader({
                                 >
                                     <Trophy className="w-5 h-5" />
                                     My Wins
+                                </Link>
+                                <Link
+                                    href="/trust"
+                                    onClick={() => setIsMobileMenuOpen(false)}
+                                    className="flex items-center gap-3 px-4 py-3 rounded-xl text-white/80 hover:bg-white/10 transition-colors"
+                                >
+                                    <Shield className="w-5 h-5" />
+                                    Trust Score
                                 </Link>
                                 <Link
                                     href="/settings"

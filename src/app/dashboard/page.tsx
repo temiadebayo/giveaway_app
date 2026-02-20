@@ -43,7 +43,7 @@ export default function DashboardPage() {
     return (
         <main className="min-h-screen bg-aurora overflow-x-hidden">
             {/* Navbar */}
-            <nav className="sticky top-0 z-50 px-6 py-4 glass">
+            <nav className="sticky top-0 z-50 px-3 sm:px-6 py-3 sm:py-4 glass">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
                     <Link href="/" className="flex items-center gap-3">
                         <Image src={logoWhite} alt="Giveaway" width={36} height={36} />
