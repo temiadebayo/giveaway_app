@@ -702,25 +702,80 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                     exit={{ opacity: 0, y: -20 }}
                                     className="space-y-4"
                                 >
-                                    {/* Guest gate — must sign in */}
+                                    {/* Guest lobby — can watch but not interact */}
                                     {isGuest ? (
-                                        <div className="card-premium p-5 sm:p-8 text-center">
-                                            <div className="relative w-24 h-24 mx-auto mb-6">
-                                                <div className="absolute inset-0 rounded-full bg-gradient-to-r from-blue-400 to-purple-500 animate-pulse" />
-                                                <div className="absolute inset-2 rounded-full bg-gray-900 flex items-center justify-center">
-                                                    <LogIn className="w-10 h-10 text-blue-400" />
+                                        <div className="card-premium p-5 sm:p-6">
+                                            <div className="text-center mb-6">
+                                                <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-blue-500/20 border border-blue-500/50 mb-3">
+                                                    <Sparkles className="w-5 h-5 text-blue-400 animate-pulse" />
+                                                    <span className="font-bold text-blue-400">Lobby Open</span>
+                                                </div>
+                                                <p className="text-white/60">
+                                                    Waiting for host to start the event...
+                                                </p>
+                                            </div>
+
+                                            {/* Floating Emotes (read-only for guests) */}
+                                            <div className="relative h-12 overflow-hidden mb-4">
+                                                <AnimatePresence>
+                                                    {floatingEmotes.map((e) => (
+                                                        <motion.div
+                                                            key={e.id}
+                                                            initial={{ opacity: 1, y: 0, x: Math.random() * 80 + 10 + '%' }}
+                                                            animate={{ opacity: 0, y: -60 }}
+                                                            exit={{ opacity: 0 }}
+                                                            transition={{ duration: 2.5 }}
+                                                            className="absolute bottom-0 text-2xl"
+                                                        >
+                                                            <span>{e.emote}</span>
+                                                            <span className="text-xs text-white/40 ml-1">{e.username}</span>
+                                                        </motion.div>
+                                                    ))}
+                                                </AnimatePresence>
+                                            </div>
+
+                                            {/* Lobby Participant List */}
+                                            <div className="mb-6">
+                                                <h4 className="text-sm font-bold text-white/60 mb-3 flex items-center gap-2">
+                                                    <Users className="w-4 h-4" />
+                                                    <span className="text-green-400">🟢 {lobbyParticipants.length}</span> players in lobby
+                                                </h4>
+                                                <div className="space-y-2 max-h-[200px] overflow-y-auto pr-1">
+                                                    {lobbyParticipants.map((p, i) => (
+                                                        <motion.div
+                                                            key={p.id}
+                                                            initial={{ opacity: 0, x: -20 }}
+                                                            animate={{ opacity: 1, x: 0 }}
+                                                            transition={{ delay: i * 0.03 }}
+                                                            className="flex items-center gap-3 p-2 rounded-lg bg-white/5"
+                                                        >
+                                                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center text-xs font-bold">
+                                                                {p.user?.avatar_url ? (
+                                                                    <img src={p.user.avatar_url} alt="" className="w-8 h-8 rounded-full" />
+                                                                ) : (
+                                                                    (p.user?.username?.[0] || '?').toUpperCase()
+                                                                )}
+                                                            </div>
+                                                            <span className="text-sm font-medium">
+                                                                {p.user?.display_name || p.user?.username || 'Player'}
+                                                            </span>
+                                                        </motion.div>
+                                                    ))}
                                                 </div>
                                             </div>
-                                            <h3 className="text-xl sm:text-2xl font-bold mb-2">Sign In to Join</h3>
-                                            <p className="text-white/60 mb-6">
-                                                You need an account to join the lobby and compete for {formatPrize(giveaway.prize_amount, giveaway.prize_currency)}!
-                                            </p>
-                                            <Link href={`/login?redirect=/giveaways/${id}`}>
-                                                <Button size="lg" className="bg-brand-gradient px-8">
-                                                    <LogIn className="w-5 h-5 mr-2" />
-                                                    Sign In to Join
-                                                </Button>
-                                            </Link>
+
+                                            {/* Subtle sign-in prompt */}
+                                            <div className="p-3 rounded-xl bg-white/5 border border-white/10 text-center">
+                                                <p className="text-sm text-white/50 mb-2">
+                                                    Sign in to send emotes, edit your profile, and compete for {formatPrize(giveaway.prize_amount, giveaway.prize_currency)}
+                                                </p>
+                                                <Link href={`/login?redirect=/giveaways/${id}`}>
+                                                    <Button size="sm" variant="outline" className="text-primary border-primary/30 hover:bg-primary/10">
+                                                        <LogIn className="w-4 h-4 mr-2" />
+                                                        Sign In
+                                                    </Button>
+                                                </Link>
+                                            </div>
                                         </div>
                                     ) : (
                                         /* Authenticated lobby */
