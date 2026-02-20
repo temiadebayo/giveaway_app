@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useSearchParams } from "next/navigation";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -21,6 +22,15 @@ export default function LoginPage() {
 
     const { signInWithPassword, signInWithEmail, loading, error, setError } = useAuth();
     const { fingerprint, isLoading: fingerprintLoading } = useFingerprint();
+    const searchParams = useSearchParams();
+
+    // Show error from URL params (e.g., from auth callback redirect)
+    useEffect(() => {
+        const urlError = searchParams.get('error');
+        if (urlError) {
+            setError(decodeURIComponent(urlError));
+        }
+    }, [searchParams, setError]);
 
     const handleEmailLogin = async (e: React.FormEvent) => {
         e.preventDefault();
@@ -213,6 +223,16 @@ export default function LoginPage() {
                     ) : (
                         // Social login options
                         <>
+                            {error && (
+                                <motion.p
+                                    initial={{ opacity: 0 }}
+                                    animate={{ opacity: 1 }}
+                                    className="text-red-400 text-sm text-center py-2 px-4 rounded-lg bg-red-500/10 border border-red-500/20 mb-4"
+                                >
+                                    {error}
+                                </motion.p>
+                            )}
+
                             <SocialAuthButtons providers={["google", "discord"]} />
 
                             <AuthDivider />
