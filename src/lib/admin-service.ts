@@ -145,12 +145,47 @@ export const adminService = {
      * Force End / Delete Giveaway
      */
     async endGiveaway(giveawayId: string) {
-        // This relies on the complete_giveaway RPC but calling it as admin
-        // Note: complete_giveaway checks RLS usually, but RPCs are SECURITY DEFINER so they execute with owner privs.
-        // However, we want to call it from here.
-        // Since we are checking isAdmin in the server action, we can just call the RPC.
         const { data, error } = await supabaseAdmin
             .rpc('complete_giveaway', { p_giveaway_id: giveawayId });
+        if (error) throw error;
+        return data;
+    },
+
+    /**
+     * Get Pending Withdrawals
+     */
+    async getPendingWithdrawals() {
+        const { data, error } = await supabaseAdmin
+            .from('withdrawal_requests')
+            .select(`
+                *,
+                profiles ( email, username )
+            `)
+            .eq('status', 'pending')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data;
+    },
+
+    /**
+     * Approve Withdrawal
+     */
+    async approveWithdrawal(withdrawalId: string) {
+        const { data, error } = await supabaseAdmin
+            .rpc('approve_withdrawal', { p_withdrawal_id: withdrawalId });
+
+        if (error) throw error;
+        return data;
+    },
+
+    /**
+     * Reject Withdrawal (refunds balance)
+     */
+    async rejectWithdrawal(withdrawalId: string) {
+        const { data, error } = await supabaseAdmin
+            .rpc('reject_withdrawal', { p_withdrawal_id: withdrawalId });
+
         if (error) throw error;
         return data;
     }

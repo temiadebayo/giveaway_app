@@ -1,26 +1,48 @@
 import { adminService } from '@/lib/admin-service';
-import { CheckCircle, XCircle, Clock } from 'lucide-react';
+import { CheckCircle, XCircle, Clock, ArrowDownLeft, ArrowUpRight } from 'lucide-react';
 import { revalidatePath } from 'next/cache';
-import { Button } from '@/components/ui/button'; // Assuming you have a button component, or use standard HTML
 
 export default async function AdminFinancePage() {
-    const pendingDeposits = await adminService.getPendingDeposits();
+    const [pendingDeposits, pendingWithdrawals] = await Promise.all([
+        adminService.getPendingDeposits(),
+        adminService.getPendingWithdrawals(),
+    ]);
 
-    // Server Action for Approval
-    async function approve(formData: FormData) {
+    // --- Deposit Server Actions ---
+    async function approveDeposit(formData: FormData) {
         "use server";
         const id = formData.get('id') as string;
         await adminService.approveDeposit(id);
         revalidatePath('/admin/finance');
     }
 
-    // Server Action for Rejection
-    async function reject(formData: FormData) {
+    async function rejectDeposit(formData: FormData) {
         "use server";
         const id = formData.get('id') as string;
         await adminService.rejectDeposit(id);
         revalidatePath('/admin/finance');
     }
+
+    // --- Withdrawal Server Actions ---
+    async function approveWithdrawal(formData: FormData) {
+        "use server";
+        const id = formData.get('id') as string;
+        await adminService.approveWithdrawal(id);
+        revalidatePath('/admin/finance');
+    }
+
+    async function rejectWithdrawal(formData: FormData) {
+        "use server";
+        const id = formData.get('id') as string;
+        await adminService.rejectWithdrawal(id);
+        revalidatePath('/admin/finance');
+    }
+
+    const formatNGN = (amount: number) =>
+        new Intl.NumberFormat('en-NG', { style: 'currency', currency: 'NGN', minimumFractionDigits: 2 }).format(amount);
+
+    const formatDate = (dateString: string) =>
+        new Date(dateString).toLocaleDateString('en-NG', { month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' });
 
     return (
         <div>
@@ -36,10 +58,10 @@ export default async function AdminFinancePage() {
                 <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
                     <div className="p-6 border-b border-slate-800 flex justify-between items-center">
                         <h2 className="text-xl font-bold flex items-center gap-2">
-                            <Clock className="w-5 h-5 text-yellow-400" />
+                            <ArrowDownLeft className="w-5 h-5 text-green-400" />
                             Pending Deposits
                         </h2>
-                        <span className="px-3 py-1 rounded-full bg-yellow-500/10 text-yellow-500 text-xs font-bold">
+                        <span className="px-3 py-1 rounded-full bg-green-500/10 text-green-500 text-xs font-bold">
                             {pendingDeposits?.length || 0} Requests
                         </span>
                     </div>
@@ -52,23 +74,24 @@ export default async function AdminFinancePage() {
                         ) : (
                             pendingDeposits.map((tx: any) => (
                                 <div key={tx.id} className="p-6 hover:bg-slate-800/50 transition-colors">
-                                    <div className="flex justify-between items-start mb-4">
+                                    <div className="flex justify-between items-start mb-3">
                                         <div>
                                             <p className="text-xl font-bold text-white mb-1">
-                                                ${tx.amount.toLocaleString()}
+                                                {formatNGN(tx.amount)}
                                             </p>
                                             <p className="text-sm font-medium text-indigo-400 font-mono">
                                                 {tx.metadata?.reference_code || 'NO-REF'}
                                             </p>
                                         </div>
                                         <div className="text-right">
-                                            <p className="text-white font-medium">{tx.profiles?.username || 'Unknown'}</p>
+                                            <p className="text-white font-medium">@{tx.profiles?.username || 'Unknown'}</p>
                                             <p className="text-xs text-slate-500">{tx.profiles?.email}</p>
+                                            <p className="text-xs text-slate-600 mt-1">{formatDate(tx.created_at)}</p>
                                         </div>
                                     </div>
 
                                     <div className="flex gap-3">
-                                        <form action={approve} className="flex-1">
+                                        <form action={approveDeposit} className="flex-1">
                                             <input type="hidden" name="id" value={tx.id} />
                                             <button
                                                 type="submit"
@@ -78,7 +101,7 @@ export default async function AdminFinancePage() {
                                                 Approve
                                             </button>
                                         </form>
-                                        <form action={reject} className="flex-1">
+                                        <form action={rejectDeposit} className="flex-1">
                                             <input type="hidden" name="id" value={tx.id} />
                                             <button
                                                 type="submit"
@@ -95,14 +118,85 @@ export default async function AdminFinancePage() {
                     </div>
                 </div>
 
-                {/* Withdrawals Placeholder */}
-                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden opacity-50">
-                    <div className="p-6 border-b border-slate-800">
-                        <h2 className="text-xl font-bold">Withdrawals</h2>
-                        <p className="text-sm text-slate-500 mt-1">Coming soon in next update</p>
+                {/* Pending Withdrawals */}
+                <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
+                    <div className="p-6 border-b border-slate-800 flex justify-between items-center">
+                        <h2 className="text-xl font-bold flex items-center gap-2">
+                            <ArrowUpRight className="w-5 h-5 text-orange-400" />
+                            Pending Withdrawals
+                        </h2>
+                        <span className="px-3 py-1 rounded-full bg-orange-500/10 text-orange-500 text-xs font-bold">
+                            {pendingWithdrawals?.length || 0} Requests
+                        </span>
                     </div>
-                    <div className="p-8 text-center text-slate-500">
-                        Withdrawal management module
+
+                    <div className="divide-y divide-slate-800">
+                        {(!pendingWithdrawals || pendingWithdrawals.length === 0) ? (
+                            <div className="p-8 text-center text-slate-500">
+                                No pending withdrawals.
+                            </div>
+                        ) : (
+                            pendingWithdrawals.map((w: any) => (
+                                <div key={w.id} className="p-6 hover:bg-slate-800/50 transition-colors">
+                                    <div className="flex justify-between items-start mb-3">
+                                        <div>
+                                            <p className="text-xl font-bold text-white mb-1">
+                                                {formatNGN(w.amount)}
+                                            </p>
+                                            <div className="space-y-0.5 text-xs">
+                                                <p className="text-orange-400">Fee: {formatNGN(w.fee)}</p>
+                                                <p className="text-green-400 font-bold">Payout: {formatNGN(w.net_amount)}</p>
+                                            </div>
+                                        </div>
+                                        <div className="text-right">
+                                            <p className="text-white font-medium">@{w.profiles?.username || 'Unknown'}</p>
+                                            <p className="text-xs text-slate-500">{w.profiles?.email}</p>
+                                            <p className="text-xs text-slate-600 mt-1">{formatDate(w.created_at)}</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Hold status */}
+                                    {w.hold_until && new Date(w.hold_until) > new Date() ? (
+                                        <div className="flex items-center gap-2 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20 mb-3">
+                                            <Clock className="w-3.5 h-3.5 text-yellow-400" />
+                                            <p className="text-xs text-yellow-400">
+                                                Hold until {formatDate(w.hold_until)}
+                                            </p>
+                                        </div>
+                                    ) : (
+                                        <div className="flex items-center gap-2 p-2 rounded-lg bg-green-500/10 border border-green-500/20 mb-3">
+                                            <CheckCircle className="w-3.5 h-3.5 text-green-400" />
+                                            <p className="text-xs text-green-400">
+                                                Hold period expired — ready to process
+                                            </p>
+                                        </div>
+                                    )}
+
+                                    <div className="flex gap-3">
+                                        <form action={approveWithdrawal} className="flex-1">
+                                            <input type="hidden" name="id" value={w.id} />
+                                            <button
+                                                type="submit"
+                                                className="w-full py-2 rounded-lg bg-green-500 hover:bg-green-600 text-black font-bold flex items-center justify-center gap-2 transition-colors"
+                                            >
+                                                <CheckCircle className="w-4 h-4" />
+                                                Process
+                                            </button>
+                                        </form>
+                                        <form action={rejectWithdrawal} className="flex-1">
+                                            <input type="hidden" name="id" value={w.id} />
+                                            <button
+                                                type="submit"
+                                                className="w-full py-2 rounded-lg bg-red-500/10 hover:bg-red-500/20 text-red-500 font-bold flex items-center justify-center gap-2 transition-colors border border-red-500/20"
+                                            >
+                                                <XCircle className="w-4 h-4" />
+                                                Reject & Refund
+                                            </button>
+                                        </form>
+                                    </div>
+                                </div>
+                            ))
+                        )}
                     </div>
                 </div>
             </div>
