@@ -77,7 +77,7 @@ BEGIN
     
     GET DIAGNOSTICS v_linked_count = ROW_COUNT;
     
-    -- Also migrate guest participant entries to real participants table
+    -- 3. Also migrate guest participant entries to real participants table
     -- for any giveaways that are still active
     INSERT INTO public.giveaway_participants (
         giveaway_id, user_id, score, taps, best_streak, joined_at, completed_at, device_fingerprint_id
@@ -97,6 +97,14 @@ BEGIN
         taps = EXCLUDED.taps,
         best_streak = EXCLUDED.best_streak,
         completed_at = EXCLUDED.completed_at;
+
+    -- 4. Update winners in giveaways table
+    -- If this guest was a winner of an ended giveaway, link the user_id now
+    UPDATE public.giveaways
+    SET winner_id = v_user_id
+    WHERE 
+        winner_fingerprint_id = p_fingerprint_id 
+        AND winner_id IS NULL;
     
     RETURN jsonb_build_object(
         'success', true,

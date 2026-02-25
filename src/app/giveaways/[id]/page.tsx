@@ -91,6 +91,10 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
     const [isReady, setIsReady] = useState(false);
     const [startCountdown, setStartCountdown] = useState<number | null>(null);
 
+    // Prize claiming state
+    const [isClaiming, setIsClaiming] = useState(false);
+    const [prizeClaimed, setPrizeClaimed] = useState(false);
+
     // Lobby state
     const [lobbyParticipants, setLobbyParticipants] = useState<Participant[]>([]);
     const [floatingEmotes, setFloatingEmotes] = useState<{ id: number; emote: string; username: string }[]>([]);
@@ -106,7 +110,11 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
         setIsGuest(!user);
 
         const giveawayData = await giveawayService.getGiveaway(id);
-        setGiveaway(giveawayData);
+        // Only update giveaway state if we got data back — don't null it out
+        // (RLS may block guests from re-fetching ended giveaways)
+        if (giveawayData) {
+            setGiveaway(giveawayData);
+        }
         setIsHost(giveawayData?.host_id === user?.id);
 
         if (giveawayData) {
@@ -205,7 +213,9 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
 
                     if (updated.status === 'ended') {
                         setPhase('ended');
-                        loadData();
+                        // Re-fetch leaderboard to get final results + winner
+                        const finalLeaderboard = await giveawayService.getCombinedLeaderboard(id);
+                        setLeaderboard(finalLeaderboard);
                     }
                 }
             )
@@ -379,14 +389,40 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                 setParticipation(participationData);
             }
 
-            const leaderboardData = await giveawayService.getLeaderboard(id);
+            const leaderboardData = await giveawayService.getCombinedLeaderboard(id);
             setLeaderboard(leaderboardData);
         } catch (error) {
             console.error("Error in game submission:", error);
         }
 
-        setTimeout(() => setPhase('waiting'), 2000);
+        // Transition to waiting — shows score + rank while giveaway is still running
+        setPhase('waiting');
     }, [id, fingerprintId, isGuest]);
+
+    const handleClaim = async () => {
+        if (!giveaway || isClaiming || isPrizeClaimed) return;
+
+        setIsClaiming(true);
+        try {
+            const result = await giveawayService.claimPrize(id);
+            if (result.success) {
+                setPrizeClaimed(true);
+                // Trigger celebratory confetti again
+                confetti({
+                    particleCount: 150,
+                    spread: 70,
+                    origin: { y: 0.6 },
+                    colors: ['#ff6b6b', '#ffd93d', '#6bcb77', '#4d96ff', '#ff6bd6']
+                });
+            } else {
+                alert(result.error || "Failed to claim prize. Please try again.");
+            }
+        } catch (error) {
+            console.error("Error claiming prize:", error);
+        } finally {
+            setIsClaiming(false);
+        }
+    };
 
     // Share functionality
     const handleShare = async () => {
@@ -451,7 +487,12 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
 
     // Winner check
     const winner = leaderboard.find(p => p.is_winner);
-    const isWinner = giveaway?.winner_id === currentUserId;
+    // Updated isWinner check to include guest fingerprint match
+    const isWinner = (currentUserId && giveaway?.winner_id === currentUserId) ||
+        (fingerprintId && giveaway?.winner_fingerprint_id === fingerprintId);
+
+    // Check if prize has already been claimed (via timestamp or local state)
+    const isPrizeClaimed = giveaway?.prize_claimed_at || prizeClaimed;
     const myRank = leaderboard.findIndex(p =>
         (currentUserId && p.user_id === currentUserId) ||
         (fingerprintId && p.fingerprint_id === fingerprintId)
@@ -651,16 +692,55 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                             <p className="text-3xl sm:text-5xl font-black text-gradient-primary mb-4">
                                                 {formatPrize(giveaway.prize_amount, giveaway.prize_currency)}
                                             </p>
-                                            <p className="text-white/60 mb-6">
-                                                Prize has been added to your wallet!
+                                            <p className="text-white/60 mb-6 font-medium">
+                                                {isPrizeClaimed
+                                                    ? "Prize successfully claimed! 🎉"
+                                                    : "Claim your prize and add it to your wallet!"}
                                             </p>
-                                            <Link href="/wallet">
-                                                <Button className="bg-brand-gradient">
-                                                    <Wallet className="w-4 h-4 mr-2" />
-                                                    View Wallet
-                                                    <ChevronRight className="w-4 h-4 ml-2" />
-                                                </Button>
-                                            </Link>
+
+                                            <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                                                {isGuest ? (
+                                                    <Link href="/auth">
+                                                        <Button className="bg-yellow-500 hover:bg-yellow-600 text-black px-8 py-6 text-lg font-bold rounded-2xl glow-primary transition-all hover:scale-105 active:scale-95">
+                                                            <LogIn className="w-6 h-6 mr-2" />
+                                                            Sign In to Claim
+                                                        </Button>
+                                                    </Link>
+                                                ) : (
+                                                    <Button
+                                                        onClick={handleClaim}
+                                                        disabled={isClaiming || !!isPrizeClaimed}
+                                                        className={`px-8 py-6 text-lg font-bold rounded-2xl transition-all hover:scale-105 active:scale-95 glow-primary ${isPrizeClaimed
+                                                                ? "bg-slate-700 text-white/50 cursor-default"
+                                                                : "bg-brand-gradient text-white"
+                                                            }`}
+                                                    >
+                                                        {isClaiming ? (
+                                                            <>
+                                                                <Loader2 className="w-6 h-6 mr-2 animate-spin" />
+                                                                Claiming...
+                                                            </>
+                                                        ) : isPrizeClaimed ? (
+                                                            <>
+                                                                <Check className="w-6 h-6 mr-2" />
+                                                                Prize Claimed
+                                                            </>
+                                                        ) : (
+                                                            <>
+                                                                <Wallet className="w-6 h-6 mr-2" />
+                                                                Claim Prize
+                                                            </>
+                                                        )}
+                                                    </Button>
+                                                )}
+
+                                                <Link href="/wallet">
+                                                    <Button variant="outline" className="border-white/10 hover:bg-white/5 px-8 py-6 text-lg font-bold rounded-2xl transition-all hover:scale-105 active:scale-95">
+                                                        View Wallet
+                                                        <ChevronRight className="w-5 h-5 ml-2" />
+                                                    </Button>
+                                                </Link>
+                                            </div>
                                         </>
                                     ) : winner ? (
                                         <>

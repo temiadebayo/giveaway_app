@@ -25,7 +25,9 @@ export interface Giveaway {
     scheduled_start_at: string | null;
     allow_sharing: boolean;
     winner_id: string | null;
+    winner_fingerprint_id: string | null;
     winning_score: number | null;
+    prize_claimed_at: string | null;
     created_at: string;
     // Joined fields
     host?: {
@@ -572,6 +574,21 @@ class GiveawayService {
             console.error('Error joining as guest:', err);
             return { success: false, error: 'Failed to join giveaway' };
         }
+    }
+
+    /**
+     * Claim prize for a won giveaway
+     */
+    async claimPrize(giveawayId: string): Promise<{ success: boolean; error?: string; prize_amount?: number }> {
+        const { data, error } = await this.supabase
+            .rpc('claim_prize', { p_giveaway_id: giveawayId });
+
+        if (error) {
+            console.error('Error claiming prize:', error);
+            return { success: false, error: error.message };
+        }
+
+        return data;
     }
 
     /**

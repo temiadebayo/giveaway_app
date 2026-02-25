@@ -45,9 +45,27 @@ export interface WithdrawalRequest {
     created_at: string;
 }
 
-// Default withdrawal fee percentage
-export const WITHDRAWAL_FEE_PERCENT = 3;
-export const WITHDRAWAL_HOLD_HOURS = 48;
+// Fee configuration
+export const FEES = {
+    DEPOSIT_FEE_PERCENT: 5,
+    WITHDRAWAL_FEE_PERCENT: 5,
+    WITHDRAWAL_VAT_PERCENT: 7.5,
+    WITHDRAWAL_COMMISSION_PERCENT: 3,
+    WITHDRAWAL_HOLD_HOURS: 48,
+    DEFAULT_CURRENCY: 'NGN',
+};
+
+// Bank details for deposits
+export const BANK_DETAILS = {
+    bankName: 'Guaranty Trust Bank',
+    accountName: 'Adebayo Temiloluwa Ryan',
+    accountNumber: '0516446667',
+    supportEmail: 'support@trygiveaway.app',
+};
+
+// Legacy exports for backward compat
+export const WITHDRAWAL_FEE_PERCENT = FEES.WITHDRAWAL_FEE_PERCENT;
+export const WITHDRAWAL_HOLD_HOURS = FEES.WITHDRAWAL_HOLD_HOURS;
 
 class WalletService {
     private supabase = createClient();
@@ -266,8 +284,8 @@ class WalletService {
     /**
      * Format currency amount
      */
-    formatCurrency(amount: number, currency: string = 'USD'): string {
-        return new Intl.NumberFormat('en-US', {
+    formatCurrency(amount: number, currency: string = 'NGN'): string {
+        return new Intl.NumberFormat('en-NG', {
             style: 'currency',
             currency,
             minimumFractionDigits: 2

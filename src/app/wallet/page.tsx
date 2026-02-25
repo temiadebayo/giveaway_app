@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppHeader } from "@/components/app-header";
 import { Breadcrumbs } from "@/components/breadcrumbs";
-import { walletService, Wallet, WalletTransaction, WithdrawalRequest, WITHDRAWAL_FEE_PERCENT } from "@/lib/wallet-service";
+import { walletService, Wallet, WalletTransaction, WithdrawalRequest, FEES, BANK_DETAILS } from "@/lib/wallet-service";
 import { createClient } from "@/lib/supabase";
 import {
     Wallet as WalletIcon,
@@ -43,6 +43,7 @@ export default function WalletPage() {
     const [showDeposit, setShowDeposit] = useState(false);
     const [depositAmount, setDepositAmount] = useState("");
     const [depositResult, setDepositResult] = useState<{ reference_code: string; amount: number } | null>(null);
+    const [username, setUsername] = useState<string>("");
 
     useEffect(() => {
         loadWalletData();
@@ -50,11 +51,23 @@ export default function WalletPage() {
 
     const loadWalletData = async () => {
         setLoading(true);
-        const [walletData, txData, withdrawalData] = await Promise.all([
-            walletService.getWallet(),
-            walletService.getTransactions(),
-            walletService.getWithdrawalRequests()
-        ]);
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+
+        // Fetch username
+        if (user) {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('username')
+                .eq('id', user.id)
+                .single();
+            if (profile?.username) setUsername(profile.username);
+        }
+
+        const walletData = await walletService.getWallet();
+        const txData = await walletService.getTransactions();
+        const withdrawalData = await walletService.getWithdrawalRequests();
+
         setWallet(walletData);
         setTransactions(txData);
         setWithdrawals(withdrawalData);
@@ -113,7 +126,7 @@ export default function WalletPage() {
     };
 
     const formatCurrency = (amount: number) => {
-        return walletService.formatCurrency(amount, wallet?.currency || 'USD');
+        return walletService.formatCurrency(amount, wallet?.currency || 'NGN');
     };
 
     const formatDate = (dateString: string) => {
@@ -141,8 +154,15 @@ export default function WalletPage() {
         }
     };
 
-    const fee = withdrawAmount ? parseFloat(withdrawAmount) * (WITHDRAWAL_FEE_PERCENT / 100) : 0;
-    const netAmount = withdrawAmount ? parseFloat(withdrawAmount) - fee : 0;
+    // Deposit fee calculation
+    const depositAmountNum = parseFloat(depositAmount) || 0;
+    const depositFee = depositAmountNum * (FEES.DEPOSIT_FEE_PERCENT / 100);
+    const depositTotal = depositAmountNum + depositFee;
+
+    // Withdrawal fee calculation
+    const withdrawAmountNum = parseFloat(withdrawAmount) || 0;
+    const withdrawFee = withdrawAmountNum * (FEES.WITHDRAWAL_FEE_PERCENT / 100);
+    const withdrawNet = withdrawAmountNum - withdrawFee;
 
     if (loading && !depositResult) { // Don't show full loader if just depositing
         return (
@@ -328,7 +348,7 @@ export default function WalletPage() {
                             initial={{ scale: 0.9, opacity: 0 }}
                             animate={{ scale: 1, opacity: 1 }}
                             exit={{ scale: 0.9, opacity: 0 }}
-                            className="w-full max-w-md card-premium p-6"
+                            className="w-full max-w-md card-premium p-6 max-h-[90vh] overflow-y-auto"
                             onClick={(e) => e.stopPropagation()}
                         >
                             {!depositResult ? (
@@ -337,21 +357,77 @@ export default function WalletPage() {
                                         <Plus className="w-5 h-5 text-green-400" />
                                         Add Funds
                                     </h2>
-                                    <p className="text-white/60 mb-6">
-                                        Enter the amount you wish to deposit. You will receive a reference code to use for your bank transfer.
+                                    <p className="text-white/60 mb-6 text-sm">
+                                        Enter the amount you want credited to your wallet. A {FEES.DEPOSIT_FEE_PERCENT}% processing fee applies.
                                     </p>
 
-                                    <div className="mb-6">
-                                        <label className="block text-sm text-white/60 mb-2">Amount (USD)</label>
+                                    {/* Amount Input */}
+                                    <div className="mb-4">
+                                        <label className="block text-sm text-white/60 mb-2">Amount to Credit (NGN)</label>
                                         <Input
                                             type="number"
                                             value={depositAmount}
                                             onChange={(e) => setDepositAmount(e.target.value)}
-                                            placeholder="50.00"
+                                            placeholder="10,000"
                                             autoFocus
                                             className="text-2xl font-bold bg-white/5 border-white/10"
                                         />
                                     </div>
+
+                                    {/* Fee Breakdown */}
+                                    {depositAmountNum > 0 && (
+                                        <div className="p-4 rounded-xl bg-white/5 mb-4 space-y-2">
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-white/60">Wallet Credit</span>
+                                                <span>{formatCurrency(depositAmountNum)}</span>
+                                            </div>
+                                            <div className="flex justify-between text-sm">
+                                                <span className="text-white/60">Processing Fee ({FEES.DEPOSIT_FEE_PERCENT}%)</span>
+                                                <span className="text-orange-400">+{formatCurrency(depositFee)}</span>
+                                            </div>
+                                            <div className="border-t border-white/10 pt-2 flex justify-between font-bold">
+                                                <span>Total to Transfer</span>
+                                                <span className="text-green-400">{formatCurrency(depositTotal)}</span>
+                                            </div>
+                                        </div>
+                                    )}
+
+                                    {/* Bank Details */}
+                                    <div className="bg-white/5 p-4 rounded-xl border border-white/10 mb-4 space-y-3">
+                                        <p className="text-xs text-white/40 uppercase tracking-widest font-bold">Transfer to</p>
+                                        <div>
+                                            <p className="text-xs text-white/40">Bank</p>
+                                            <p className="font-medium">{BANK_DETAILS.bankName}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-white/40">Account Name</p>
+                                            <p className="font-medium">{BANK_DETAILS.accountName}</p>
+                                        </div>
+                                        <div>
+                                            <p className="text-xs text-white/40">Account Number</p>
+                                            <div className="flex items-center gap-2">
+                                                <p className="font-mono font-bold text-lg">{BANK_DETAILS.accountNumber}</p>
+                                                <Button size="sm" variant="ghost" className="text-xs" onClick={() => navigator.clipboard.writeText(BANK_DETAILS.accountNumber)}>
+                                                    Copy
+                                                </Button>
+                                            </div>
+                                        </div>
+                                    </div>
+
+                                    {/* Username Narration Warning */}
+                                    <div className="flex items-start gap-2 p-3 rounded-xl bg-yellow-500/10 border border-yellow-500/20 mb-4">
+                                        <AlertCircle className="w-4 h-4 text-yellow-400 mt-0.5 flex-shrink-0" />
+                                        <div>
+                                            <p className="text-sm text-yellow-400 font-bold">Include your username in the transfer narration/remarks:</p>
+                                            <p className="text-lg font-mono font-black text-yellow-300 mt-1">{username ? `@${username}` : 'Loading...'}</p>
+                                            <p className="text-xs text-yellow-400/70 mt-1">Without this, we cannot verify your transfer.</p>
+                                        </div>
+                                    </div>
+
+                                    {/* Support */}
+                                    <p className="text-xs text-white/30 mb-4 text-center">
+                                        Issues? Contact <a href={`mailto:${BANK_DETAILS.supportEmail}`} className="text-primary underline">{BANK_DETAILS.supportEmail}</a>
+                                    </p>
 
                                     <div className="flex gap-3">
                                         <Button variant="outline" className="flex-1" onClick={() => setShowDeposit(false)}>
@@ -360,9 +436,10 @@ export default function WalletPage() {
                                         <Button
                                             className="flex-1 bg-green-500 hover:bg-green-600 text-black font-bold"
                                             onClick={handleDeposit}
-                                            disabled={!depositAmount || parseFloat(depositAmount) <= 0}
+                                            disabled={!depositAmount || depositAmountNum <= 0 || loading}
                                         >
-                                            Generate Code
+                                            {loading ? <Loader2 className="w-4 h-4 animate-spin mr-2" /> : null}
+                                            Continue
                                         </Button>
                                     </div>
                                 </>
@@ -372,39 +449,33 @@ export default function WalletPage() {
                                         <div className="w-16 h-16 rounded-full bg-green-500/20 flex items-center justify-center mx-auto mb-4">
                                             <CheckCircle2 className="w-8 h-8 text-green-500" />
                                         </div>
-                                        <h2 className="text-2xl font-bold mb-2">Request Created!</h2>
+                                        <h2 className="text-2xl font-bold mb-2">Deposit Requested!</h2>
                                         <p className="text-white/60">
-                                            Please make a bank transfer of <span className="text-white font-bold">${depositResult.amount}</span> details below:
+                                            Transfer <span className="text-white font-bold">{formatCurrency(depositTotal)}</span> to the bank details shown above.
                                         </p>
                                     </div>
 
-                                    <div className="bg-white/5 p-6 rounded-xl border border-white/10 mb-6 space-y-4">
-                                        <div>
-                                            <p className="text-xs text-white/40 uppercase tracking-widest mb-1">Bank Name</p>
-                                            <p className="font-medium">TechJack Global Ltd.</p>
-                                        </div>
-                                        <div>
-                                            <p className="text-xs text-white/40 uppercase tracking-widest mb-1">Account Number</p>
-                                            <p className="font-mono font-medium">123-456-7890</p>
-                                        </div>
-                                        <div className="pt-4 border-t border-white/10">
-                                            <p className="text-xs text-yellow-400 uppercase tracking-widest mb-1 font-bold">Reference Code (REQUIRED)</p>
-                                            <div className="bg-black/30 p-3 rounded-lg flex justify-between items-center">
-                                                <code className="text-xl font-black text-yellow-400 tracking-wider">
-                                                    {depositResult.reference_code}
-                                                </code>
-                                                <Button size="sm" variant="ghost" onClick={() => navigator.clipboard.writeText(depositResult.reference_code)}>
-                                                    Copy
-                                                </Button>
-                                            </div>
-                                            <p className="text-xs text-white/40 mt-2">
-                                                * You MUST include this code in your transfer description for it to be credited.
-                                            </p>
+                                    <div className="bg-white/5 p-4 rounded-xl border border-white/10 mb-4">
+                                        <p className="text-xs text-white/40 uppercase tracking-widest mb-2">Your Reference Code</p>
+                                        <div className="bg-black/30 p-3 rounded-lg flex justify-between items-center">
+                                            <code className="text-xl font-black text-yellow-400 tracking-wider">
+                                                {depositResult.reference_code}
+                                            </code>
+                                            <Button size="sm" variant="ghost" onClick={() => navigator.clipboard.writeText(depositResult.reference_code)}>
+                                                Copy
+                                            </Button>
                                         </div>
                                     </div>
 
+                                    <div className="flex items-start gap-2 p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 mb-4">
+                                        <Shield className="w-4 h-4 text-blue-400 mt-0.5" />
+                                        <p className="text-xs text-blue-400">
+                                            Once you complete the transfer, your deposit will be verified by our team. Funds will appear in your wallet after confirmation.
+                                        </p>
+                                    </div>
+
                                     <Button
-                                        className="w-full bg-white/10 hover:bg-white/20"
+                                        className="w-full bg-green-500 hover:bg-green-600 text-black font-bold"
                                         onClick={() => {
                                             setShowDeposit(false);
                                             setDepositResult(null);
@@ -412,7 +483,7 @@ export default function WalletPage() {
                                             loadWalletData();
                                         }}
                                     >
-                                        I've sent the transfer
+                                        I&apos;ve Sent the Money
                                     </Button>
                                 </>
                             )}
@@ -465,20 +536,23 @@ export default function WalletPage() {
                             </div>
 
                             {/* Fee Breakdown */}
-                            {parseFloat(withdrawAmount) > 0 && (
+                            {withdrawAmountNum > 0 && (
                                 <div className="p-4 rounded-xl bg-white/5 mb-4 space-y-2">
                                     <div className="flex justify-between text-sm">
-                                        <span className="text-white/60">Amount</span>
-                                        <span>{formatCurrency(parseFloat(withdrawAmount) || 0)}</span>
+                                        <span className="text-white/60">Withdrawal Amount</span>
+                                        <span>{formatCurrency(withdrawAmountNum)}</span>
                                     </div>
                                     <div className="flex justify-between text-sm">
-                                        <span className="text-white/60">Fee ({WITHDRAWAL_FEE_PERCENT}%)</span>
-                                        <span className="text-orange-400">-{formatCurrency(fee)}</span>
+                                        <span className="text-white/60">Processing Fee ({FEES.WITHDRAWAL_FEE_PERCENT}%)</span>
+                                        <span className="text-orange-400">-{formatCurrency(withdrawFee)}</span>
                                     </div>
                                     <div className="border-t border-white/10 pt-2 flex justify-between font-bold">
-                                        <span>You'll Receive</span>
-                                        <span className="text-green-400">{formatCurrency(netAmount)}</span>
+                                        <span>You&apos;ll Receive</span>
+                                        <span className="text-green-400">{formatCurrency(withdrawNet)}</span>
                                     </div>
+                                    <p className="text-xs text-white/40 pt-1">
+                                        <Link href="/fees" className="text-primary underline">View fee policy</Link>
+                                    </p>
                                 </div>
                             )}
 
