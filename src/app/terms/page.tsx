@@ -180,7 +180,7 @@ export default function AppTermsPage() {
                             <h3 className="text-xl font-semibold text-white">3.3 Contact Information</h3>
                             <p>
                                 For legal inquiries or partnership discussions, contact the team at{' '}
-                                <a href="mailto:mail.giveawayapp@gmail.com" className="text-primary hover:text-primary/80 transition-colors">mail.giveawayapp@gmail.com</a>
+                                <a href="mailto:info@trygiveaway.app" className="text-primary hover:text-primary/80 transition-colors">info@trygiveaway.app</a>
                                 {' '}or via WhatsApp at{' '}
                                 <a href="https://wa.me/2347065964760" target="_blank" rel="noopener noreferrer" className="text-primary hover:text-primary/80 transition-colors">+2347065964760</a>.
                             </p>
