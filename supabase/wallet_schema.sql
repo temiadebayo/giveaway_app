@@ -58,7 +58,8 @@ CREATE TABLE IF NOT EXISTS public.wallet_transactions (
     reference_id UUID,    -- ID of related entity
     description TEXT,
     metadata JSONB,
-    created_at TIMESTAMPTZ DEFAULT NOW()
+    created_at TIMESTAMPTZ DEFAULT NOW(),
+    updated_at TIMESTAMPTZ DEFAULT NOW()
 );
 
 -- Enable RLS
