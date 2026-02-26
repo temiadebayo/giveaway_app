@@ -33,7 +33,7 @@ export async function POST(
         // Verify giveaway exists and is active
         const { data: giveaway, error: giveawayError } = await supabase
             .from('giveaways')
-            .select('id, status')
+            .select('id, status, host_id, prevent_previous_winners_hours')
             .eq('id', giveawayId)
             .single();
 
@@ -61,6 +61,28 @@ export async function POST(
 
         if (existing) {
             return NextResponse.json({ success: true, alreadyJoined: true });
+        }
+
+        // COOLDOWN CHECK: Prevent recent winners of this host from joining
+        if (giveaway.prevent_previous_winners_hours && giveaway.prevent_previous_winners_hours > 0) {
+            const timeThreshold = new Date(Date.now() - giveaway.prevent_previous_winners_hours * 60 * 60 * 1000).toISOString();
+
+            const { data: recentWins } = await supabase
+                .from('guest_participants')
+                .select('id')
+                .eq('fingerprint_id', fingerprintId)
+                .eq('is_winner', true)
+                .gte('completed_at', timeThreshold)
+                .not('giveaways', 'is', null)
+                .filter('giveaways.host_id', 'eq', giveaway.host_id)
+                .limit(1);
+
+            if (recentWins && recentWins.length > 0) {
+                return NextResponse.json(
+                    { success: false, error: `You recently won an event from this host. Please wait ${giveaway.prevent_previous_winners_hours} hours from your win before joining their new events.` },
+                    { status: 403 }
+                );
+            }
         }
 
         // Insert guest participant

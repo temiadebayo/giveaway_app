@@ -102,6 +102,8 @@ export default function CreateGiveawayPage() {
         game_duration_seconds: 30,
         min_trust_tier: 'bronze' as TrustTier,
         max_participants: 1000,
+        number_of_winners: 1,
+        prevent_previous_winners_hours: 0,
     });
 
     // Load wallet balance on mount
@@ -176,6 +178,8 @@ export default function CreateGiveawayPage() {
             duration_seconds: form.game_duration_seconds,
             min_trust_tier: form.min_trust_tier,
             max_participants: form.max_participants,
+            number_of_winners: form.number_of_winners,
+            prevent_previous_winners_hours: form.prevent_previous_winners_hours,
             scheduled_start: null,
             allow_sharing: allowSharing,
         });
@@ -543,6 +547,46 @@ export default function CreateGiveawayPage() {
                                     value={form.max_participants}
                                     onChange={(e) => setForm({ ...form, max_participants: Number(e.target.value) })}
                                 />
+                            </div>
+
+                            {/* Number of Winners */}
+                            <div className="card-premium p-6">
+                                <label className="block mb-2 font-medium">
+                                    <Trophy className="w-4 h-4 inline mr-2 text-yellow-400" />
+                                    Number of Winners
+                                </label>
+                                <Input
+                                    type="number"
+                                    min={1}
+                                    max={form.max_participants || 100}
+                                    value={form.number_of_winners}
+                                    onChange={(e) => setForm({ ...form, number_of_winners: Number(e.target.value) })}
+                                />
+                                <p className="text-xs text-white/40 mt-2">
+                                    Top scorers will split the prize pool equally.
+                                </p>
+                            </div>
+
+                            {/* Winner Cooldown Filter */}
+                            <div className="card-premium p-6">
+                                <label className="block mb-2 font-medium">
+                                    <Shield className="w-4 h-4 inline mr-2 text-red-400" />
+                                    Prevent Recent Winners (Cooldown)
+                                </label>
+                                <div className="flex items-center gap-3">
+                                    <Input
+                                        type="number"
+                                        min={0}
+                                        max={720}
+                                        value={form.prevent_previous_winners_hours}
+                                        onChange={(e) => setForm({ ...form, prevent_previous_winners_hours: Number(e.target.value) })}
+                                        className="w-32"
+                                    />
+                                    <span className="text-white/60">Hours</span>
+                                </div>
+                                <p className="text-xs text-white/40 mt-2">
+                                    0 means disabled. If set to 1 hour, anyone who won a giveaway hosted by you in the last hour will be blocked from joining this one.
+                                </p>
                             </div>
 
                             {/* Allow Sharing Toggle */}

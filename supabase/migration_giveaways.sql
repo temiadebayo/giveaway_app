@@ -17,6 +17,8 @@ CREATE TABLE IF NOT EXISTS public.giveaways (
     game_duration_seconds INTEGER DEFAULT 30,
     min_trust_tier TEXT DEFAULT 'bronze' CHECK (min_trust_tier IN ('bronze', 'silver', 'gold', 'diamond')),
     max_participants INTEGER DEFAULT 100,
+    number_of_winners INTEGER DEFAULT 1 CHECK (number_of_winners >= 1),
+    prevent_previous_winners_hours INTEGER DEFAULT 0 CHECK (prevent_previous_winners_hours >= 0),
     entry_fee DECIMAL(10,2) DEFAULT 0,
     status TEXT DEFAULT 'draft' CHECK (status IN ('draft', 'scheduled', 'live', 'ended', 'cancelled')),
     starts_at TIMESTAMPTZ,

@@ -22,6 +22,13 @@ BEGIN
     -- Generate Ref Code
     v_reference_code := 'DEP-' || UPPER(SUBSTRING(MD5(RANDOM()::TEXT || CLOCK_TIMESTAMP()::TEXT) FROM 1 FOR 6));
 
+    -- Stage the funds in Escrow immediately
+    UPDATE public.wallets
+    SET 
+        escrow_balance = escrow_balance + p_amount,
+        updated_at = NOW()
+    WHERE id = v_wallet.id;
+
     -- Insert Pending Transaction
     INSERT INTO public.wallet_transactions (
         wallet_id, 
@@ -88,9 +95,10 @@ BEGIN
         RETURN jsonb_build_object('success', false, 'error', 'Wallet not found');
     END IF;
 
-    -- Update Wallet Balance
+    -- Update Wallet Balance (Move from escrow to main balance)
     UPDATE public.wallets
     SET 
+        escrow_balance = escrow_balance - v_tx.amount,
         balance = balance + v_tx.amount,
         total_deposited = total_deposited + v_tx.amount,
         updated_at = NOW()
@@ -103,7 +111,7 @@ BEGIN
         status = 'completed', 
         balance_before = v_wallet.balance,              -- Old balance
         balance_after = v_wallet.balance + v_tx.amount, -- New balance
-        updated_at = NOW() -- Assuming updated_at exists, generic timestamp
+        updated_at = NOW()
     WHERE id = p_transaction_id;
 
     RETURN jsonb_build_object('success', true);
@@ -114,11 +122,31 @@ $$ LANGUAGE plpgsql SECURITY DEFINER;
 -- 3. Function to REJECT a deposit
 CREATE OR REPLACE FUNCTION public.reject_deposit(p_transaction_id UUID)
 RETURNS JSONB AS $$
+DECLARE
+    v_tx RECORD;
 BEGIN
+    -- Get pending transaction
+    SELECT * INTO v_tx
+    FROM public.wallet_transactions
+    WHERE id = p_transaction_id AND status = 'pending' AND type = 'deposit';
+    
+    IF v_tx IS NULL THEN
+        RETURN jsonb_build_object('success', false, 'error', 'Pending deposit not found or already processed');
+    END IF;
+
+    -- Update Wallet Balance (Remove from escrow_balance since it was denied)
+    UPDATE public.wallets
+    SET 
+        escrow_balance = escrow_balance - v_tx.amount,
+        updated_at = NOW()
+    WHERE id = v_tx.wallet_id;
+
+    -- Cancel the transaction
     UPDATE public.wallet_transactions
     SET status = 'cancelled', updated_at = NOW()
-    WHERE id = p_transaction_id AND status = 'pending' AND type = 'deposit';
+    WHERE id = p_transaction_id;
     
     RETURN jsonb_build_object('success', true);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;
+

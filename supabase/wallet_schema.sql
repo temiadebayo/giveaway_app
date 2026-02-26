@@ -230,7 +230,9 @@ CREATE OR REPLACE FUNCTION public.create_giveaway_with_escrow(
     p_duration_seconds INTEGER DEFAULT 30,
     p_min_trust_tier TEXT DEFAULT 'bronze',
     p_max_participants INTEGER DEFAULT 1000,
-    p_scheduled_start TIMESTAMPTZ DEFAULT NULL
+    p_scheduled_start TIMESTAMPTZ DEFAULT NULL,
+    p_number_of_winners INTEGER DEFAULT 1,
+    p_prevent_previous_winners_hours INTEGER DEFAULT 0
 )
 RETURNS JSONB AS $$
 DECLARE
@@ -266,11 +268,13 @@ BEGIN
     INSERT INTO public.giveaways (
         host_id, title, description, prize_amount, prize_currency,
         game_type, game_duration_seconds, min_trust_tier, max_participants,
+        number_of_winners, prevent_previous_winners_hours,
         status, starts_at, ends_at
     )
     VALUES (
         auth.uid(), p_title, p_description, p_prize_amount, 'USD',
         p_game_type, p_duration_seconds, p_min_trust_tier, p_max_participants,
+        p_number_of_winners, p_prevent_previous_winners_hours,
         CASE WHEN p_scheduled_start IS NULL THEN 'live' ELSE 'scheduled' END,
         v_start_time, v_end_time
     )
@@ -318,9 +322,11 @@ RETURNS JSONB AS $$
 DECLARE
     v_giveaway RECORD;
     v_escrow RECORD;
-    v_winner RECORD;
     v_participant_count INTEGER;
-    v_winner_wallet RECORD;
+    v_winners RECORD;  -- Cursor/iterator for loops
+    v_winner_count INTEGER := 0;
+    v_individual_prize DECIMAL(12,2);
+    v_winner_list JSONB := '[]'::JSONB;
 BEGIN
     -- Get giveaway
     SELECT * INTO v_giveaway
@@ -385,36 +391,78 @@ BEGIN
         );
     END IF;
     
-    -- Get winner (highest score)
-    SELECT p.*, pr.username, pr.display_name
-    INTO v_winner
-    FROM public.giveaway_participants p
-    JOIN public.profiles pr ON p.user_id = pr.id
-    WHERE p.giveaway_id = p_giveaway_id
-    ORDER BY p.score DESC, p.completed_at ASC
-    LIMIT 1;
-    
-    -- Get winner's wallet
-    SELECT * INTO v_winner_wallet
-    FROM public.wallets
-    WHERE user_id = v_winner.user_id;
-    
-    -- If winner has no wallet, create one
-    IF v_winner_wallet IS NULL THEN
+    -- Find actual number of winners to reward (capped by participant count and requested number)
+    SELECT COUNT(*) INTO v_winner_count FROM (
+        SELECT id FROM public.giveaway_participants
+        WHERE giveaway_id = p_giveaway_id
+        ORDER BY score DESC, completed_at ASC
+        LIMIT v_giveaway.number_of_winners
+    ) AS win_query;
+
+    v_individual_prize := ROUND(v_escrow.amount / GREATEST(v_winner_count, 1), 2);
+
+    -- Loop through the winners and distribute individual prizes
+    FOR v_winners IN 
+        SELECT p.*, pr.username, pr.display_name
+        FROM public.giveaway_participants p
+        JOIN public.profiles pr ON p.user_id = pr.id
+        WHERE p.giveaway_id = p_giveaway_id
+        ORDER BY p.score DESC, p.completed_at ASC
+        LIMIT v_giveaway.number_of_winners
+    LOOP
+        -- Ensure winner has a wallet
         INSERT INTO public.wallets (user_id)
-        VALUES (v_winner.user_id)
-        RETURNING * INTO v_winner_wallet;
-    END IF;
+        VALUES (v_winners.user_id)
+        ON CONFLICT (user_id) DO NOTHING;
+
+        -- Transfer individual prize to winner
+        UPDATE public.wallets
+        SET 
+            balance = balance + v_individual_prize,
+            total_earned = total_earned + v_individual_prize,
+            updated_at = NOW()
+        WHERE user_id = v_winners.user_id;
+
+        -- Record individual winner transaction
+        INSERT INTO public.wallet_transactions (
+            wallet_id, user_id, type, amount, fee, net_amount,
+            balance_before, balance_after, reference_type, reference_id,
+            description
+        )
+        SELECT 
+            w.id, v_winners.user_id, 'prize_release', v_individual_prize, 0, v_individual_prize,
+            w.balance - v_individual_prize, w.balance, 'giveaway', p_giveaway_id,
+            'Prize won: ' || v_giveaway.title
+        FROM public.wallets w WHERE w.user_id = v_winners.user_id;
+
+        -- Update winner's profile stats
+        UPDATE public.profiles
+        SET 
+            total_wins = total_wins + 1,
+            total_earnings = total_earnings + v_individual_prize,
+            updated_at = NOW()
+        WHERE id = v_winners.user_id;
+
+        -- Build winner list JSON array for return
+        v_winner_list := v_winner_list || jsonb_build_object(
+            'user_id', v_winners.user_id,
+            'username', v_winners.username,
+            'score', v_winners.score,
+            'prize', v_individual_prize
+        );
+    END LOOP;
     
-    -- Transfer prize to winner
-    UPDATE public.wallets
-    SET 
-        balance = balance + v_escrow.amount,
-        total_earned = total_earned + v_escrow.amount,
-        updated_at = NOW()
-    WHERE user_id = v_winner.user_id;
-    
-    -- Reduce host's escrow balance
+    -- Mark all chosen top ranks as winners
+    UPDATE public.giveaway_participants
+    SET is_winner = true
+    WHERE giveaway_id = p_giveaway_id AND user_id IN (
+        SELECT user_id FROM public.giveaway_participants
+        WHERE giveaway_id = p_giveaway_id
+        ORDER BY score DESC, completed_at ASC
+        LIMIT v_giveaway.number_of_winners
+    );
+
+    -- Reduce host's escrow balance by full amount
     UPDATE public.wallets
     SET 
         escrow_balance = escrow_balance - v_escrow.amount,
@@ -423,52 +471,26 @@ BEGIN
     
     -- Update escrow
     UPDATE public.escrow
-    SET status = 'released', released_to = v_winner.user_id, released_at = NOW()
+    SET status = 'released', released_at = NOW()
     WHERE id = v_escrow.id;
     
-    -- Update giveaway
+    -- Escrow `released_to` historically stored 1 winner, skip this or keep null for multi-winner
+
+    -- Update giveaway (Set primary winner_id as the 1st place for legacy UI compatibility)
     UPDATE public.giveaways
     SET 
         status = 'ended', 
-        winner_id = v_winner.user_id,
-        winning_score = v_winner.score,
+        winner_id = (v_winner_list->0->>'user_id')::UUID,
+        winning_score = (v_winner_list->0->>'score')::INTEGER,
         ends_at = NOW(),
         updated_at = NOW()
     WHERE id = p_giveaway_id;
     
-    -- Mark winner in participants
-    UPDATE public.giveaway_participants
-    SET is_winner = true
-    WHERE giveaway_id = p_giveaway_id AND user_id = v_winner.user_id;
-    
-    -- Update winner's profile stats
-    UPDATE public.profiles
-    SET 
-        total_wins = total_wins + 1,
-        total_earnings = total_earnings + v_escrow.amount,
-        updated_at = NOW()
-    WHERE id = v_winner.user_id;
-    
-    -- Record winner transaction
-    INSERT INTO public.wallet_transactions (
-        wallet_id, user_id, type, amount, fee, net_amount,
-        balance_before, balance_after, reference_type, reference_id,
-        description
-    )
-    VALUES (
-        v_winner_wallet.id, v_winner.user_id, 'prize_release', v_escrow.amount, 0, v_escrow.amount,
-        v_winner_wallet.balance, v_winner_wallet.balance + v_escrow.amount, 'giveaway', p_giveaway_id,
-        'Prize won: ' || v_giveaway.title
-    );
-    
     RETURN jsonb_build_object(
         'success', true,
         'status', 'ended',
-        'winner_id', v_winner.user_id,
-        'winner_username', v_winner.username,
-        'winner_display_name', v_winner.display_name,
-        'winning_score', v_winner.score,
-        'prize_amount', v_escrow.amount,
+        'winners', v_winner_list,
+        'total_prize_amount', v_escrow.amount,
         'participant_count', v_participant_count
     );
 END;

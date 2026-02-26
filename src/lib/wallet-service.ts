@@ -207,6 +207,8 @@ class WalletService {
         max_participants?: number;
         scheduled_start?: Date | null;
         allow_sharing?: boolean;
+        number_of_winners?: number;
+        prevent_previous_winners_hours?: number;
     }): Promise<{
         success: boolean;
         giveaway_id?: string;
@@ -226,7 +228,9 @@ class WalletService {
                 p_min_trust_tier: params.min_trust_tier || 'bronze',
                 p_max_participants: params.max_participants || 1000,
                 p_scheduled_start: params.scheduled_start?.toISOString() || null,
-                p_allow_sharing: params.allow_sharing !== false
+                p_allow_sharing: params.allow_sharing !== false,
+                p_number_of_winners: params.number_of_winners || 1,
+                p_prevent_previous_winners_hours: params.prevent_previous_winners_hours || 0
             });
 
         if (error) {

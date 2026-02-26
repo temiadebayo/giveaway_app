@@ -20,6 +20,8 @@ export interface Giveaway {
     max_participants: number;
     entry_fee: number;
     status: 'draft' | 'scheduled' | 'live' | 'ended' | 'cancelled';
+    number_of_winners: number;
+    prevent_previous_winners_hours: number;
     starts_at: string | null;
     ends_at: string | null;
     scheduled_start_at: string | null;
@@ -195,15 +197,38 @@ class GiveawayService {
             return { success: false, error: 'Not authenticated' };
         }
 
-        // SECURITY FIX #1: Host cannot join their own giveaway
+        // SECURITY FIX #1: Host cannot join their own giveaway & Cooldown check
         const { data: giveaway } = await this.supabase
             .from('giveaways')
-            .select('host_id')
+            .select('host_id, prevent_previous_winners_hours')
             .eq('id', giveawayId)
             .single();
 
         if (giveaway?.host_id === user.id) {
             return { success: false, error: 'Hosts cannot participate in their own giveaways' };
+        }
+
+        // COOLDOWN CHECK: Prevent recent winners of this host from joining
+        if (giveaway?.prevent_previous_winners_hours && giveaway.prevent_previous_winners_hours > 0) {
+            const timeThreshold = new Date(Date.now() - giveaway.prevent_previous_winners_hours * 60 * 60 * 1000).toISOString();
+
+            const { data: recentWins } = await this.supabase
+                .from('giveaway_participants')
+                .select('id')
+                .eq('user_id', user.id)
+                .eq('is_winner', true)
+                .gte('completed_at', timeThreshold)
+                // We need to join with giveaways to verify it's the SAME host
+                .not('giveaways', 'is', null)
+                .filter('giveaways.host_id', 'eq', giveaway.host_id)
+                .limit(1);
+
+            if (recentWins && recentWins.length > 0) {
+                return {
+                    success: false,
+                    error: `You recently won an event from this host. Please wait ${giveaway.prevent_previous_winners_hours} hours from your win before joining their new events.`
+                };
+            }
         }
 
         // Check if already joined
@@ -419,6 +444,8 @@ class GiveawayService {
                 game_duration_seconds: giveaway.game_duration_seconds || 30,
                 min_trust_tier: giveaway.min_trust_tier || 'bronze',
                 max_participants: giveaway.max_participants || 100,
+                number_of_winners: giveaway.number_of_winners || 1,
+                prevent_previous_winners_hours: giveaway.prevent_previous_winners_hours || 0,
                 entry_fee: giveaway.entry_fee || 0,
                 status: 'draft',
             })
