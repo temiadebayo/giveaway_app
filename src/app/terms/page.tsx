@@ -93,64 +93,66 @@ export default function AppTermsPage() {
                         <div className="space-y-3">
                             <h3 className="text-xl font-semibold text-white">1.1 The Platform</h3>
                             <p>
-                                The Giveaway App provides an automated system for social media engagement campaigns for businesses, influencers, NGOs, and government institutions.
+                                The Giveaway App is a skill-based competition platform where users participate in tap challenges and skill games to win real prizes.
                             </p>
                             <p>
-                                Use of the platform is subject to the selection of a Freemium, Subscription, or Enterprise licensing model.
+                                The platform consists of free-to-enter and premium paid giveaways hosted by creators, brands, and individuals.
                             </p>
                         </div>
 
                         <div className="space-y-3">
-                            <h3 className="text-xl font-semibold text-white">1.2 Merit-Based Winner Selection (The &quot;Effort&quot; Clause)</h3>
+                            <h3 className="text-xl font-semibold text-white">1.2 Merit-Based Winner Selection</h3>
                             <ul className="list-disc pl-6 space-y-2 text-slate-400">
-                                <li><strong className="text-slate-200">No Random Selection:</strong> Users acknowledge that this platform does not utilize random draws or games of chance.</li>
-                                <li><strong className="text-slate-200">Participant Effort:</strong> Winners are determined solely by measurable engagement and performance metrics tracked by the platform, such as likes, shares, comments, and registrations.</li>
-                                <li><strong className="text-slate-200">The Referee’s Decision:</strong> The platform acts as a technical referee to validate participant effort based on real-time analytics.</li>
+                                <li><strong className="text-slate-200">Skill-Based Completion:</strong> Users acknowledge that this platform does not utilize random draws, lotteries, or games of chance.</li>
+                                <li><strong className="text-slate-200">Leaderboard Rankings:</strong> Winners are determined solely by measurable performance metrics in our skill-based games (e.g., completion time, tap speed, and accuracy).</li>
+                                <li><strong className="text-slate-200">Fair Play Policy:</strong> Any use of autoclickers, macros, bots, or modifications to manipulate game scores is strictly prohibited and will result in an immediate ban and forfeiture of prizes.</li>
                             </ul>
                         </div>
 
                         <div className="space-y-3">
-                            <h3 className="text-xl font-semibold text-white">1.3 AI-Powered Fraud & Bot Detection</h3>
+                            <h3 className="text-xl font-semibold text-white">1.3 Wallet, Deposits, & Withdrawals</h3>
                             <ul className="list-disc pl-6 space-y-2 text-slate-400">
-                                <li>To ensure fairness, the platform utilizes AI-driven bot detection and machine learning to filter entries.</li>
-                                <li>The Giveaway App reserves the right to disqualify any participant flagged for fraudulent activity or automated entry manipulation.</li>
+                                <li>The platform provides a digital wallet to handle entry fees and prize distributions. All funds are held securely.</li>
+                                <li><strong>Platform Fees:</strong> The Giveaway App charges processing fees to maintain the platform infrastructure, which include deposit fees and withdrawal fees as presented during these respective actions.</li>
+                                <li>Users must meet minimum withdrawal thresholds and pass required identity verifications before processing a withdrawal.</li>
                             </ul>
                         </div>
 
                         <div className="space-y-3">
-                            <h3 className="text-xl font-semibold text-white">1.4 Host Responsibilities</h3>
+                            <h3 className="text-xl font-semibold text-white">1.4 Host Responsibilities & Escrow</h3>
                             <ul className="list-disc pl-6 space-y-2 text-slate-400">
-                                <li>Hosts (Businesses, NGOs, Governments) are solely responsible for the legality and fulfillment of any prizes or rewards offered.</li>
-                                <li>The Giveaway App is not responsible for the failure of a host to deliver prizes.</li>
+                                <li>Hosts creating paid giveaways must fund the prize pool in advance. These funds are held in escrow by the platform until the giveaway concludes and winners are verified.</li>
+                                <li>Hosts are responsible for ensuring their giveaways comply with local laws and regulations.</li>
                             </ul>
                         </div>
                     </section>
 
-                    {/* SECTION 2: PRIVACY POLICY */}
+                    {/* SECTION 2: PRIVACY & KYC POLICY */}
                     <section className="space-y-6">
-                        <h2 className="text-2xl font-bold text-white border-b border-slate-800 pb-2 sticky top-0 bg-slate-900/90 backdrop-blur py-2">2. Privacy Policy</h2>
+                        <h2 className="text-2xl font-bold text-white border-b border-slate-800 pb-2 sticky top-0 bg-slate-900/90 backdrop-blur py-2">2. Privacy & KYC Policy</h2>
 
                         <div className="space-y-3">
                             <h3 className="text-xl font-semibold text-white">2.1 Data Collection & Analytics</h3>
                             <ul className="list-disc pl-6 space-y-2 text-slate-400">
-                                <li>We collect engagement data (likes, shares, comments) and participant demographics to provide real-time insights for hosts.</li>
-                                <li>This data is used to generate optimization recommendations for future campaigns.</li>
+                                <li>We collect gameplay metrics, device fingerprints, and account interaction data to ensure the integrity of the leaderboards and prevent fraud.</li>
+                                <li>This data is used to verify legitimate winners and maintain a fair competitive environment.</li>
                             </ul>
                         </div>
 
                         <div className="space-y-3">
-                            <h3 className="text-xl font-semibold text-white">2.2 Security & Compliance</h3>
+                            <h3 className="text-xl font-semibold text-white">2.2 KYC (Know Your Customer) Verification</h3>
+                            <ul className="list-disc pl-6 space-y-2 text-slate-400">
+                                <li>To prevent fraud, comply with anti-money laundering (AML) regulations, and ensure fair play, users may be required to complete identity verification (KYC).</li>
+                                <li>KYC data (such as government-issued IDs and liveness selfies) is processed securely using our automated verification partners and is never sold to third parties.</li>
+                                <li>Users acknowledge that they must verify their identity to withdraw accumulated winnings or access high-tier giveaway features.</li>
+                            </ul>
+                        </div>
+
+                        <div className="space-y-3">
+                            <h3 className="text-xl font-semibold text-white">2.3 Security & Compliance</h3>
                             <ul className="list-disc pl-6 space-y-2 text-slate-400">
                                 <li>All user data is protected via end-to-end encryption and cloud-based hosting on secure infrastructures.</li>
-                                <li>Our data practices are designed to comply with GDPR and CCPA regulations.</li>
-                            </ul>
-                        </div>
-
-                        <div className="space-y-3">
-                            <h3 className="text-xl font-semibold text-white">2.3 Third-Party Integrations</h3>
-                            <ul className="list-disc pl-6 space-y-2 text-slate-400">
-                                <li>The platform integrates with third-party social media APIs (Instagram, X/Twitter, Facebook, etc.).</li>
-                                <li>We do not store sensitive account passwords for these third-party platforms.</li>
+                                <li>Our data practices are designed to comply with standard privacy regulations.</li>
                             </ul>
                         </div>
                     </section>
