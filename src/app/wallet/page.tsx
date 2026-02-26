@@ -46,10 +46,6 @@ export default function WalletPage() {
     const [depositError, setDepositError] = useState<string | null>(null);
     const [username, setUsername] = useState<string>("");
 
-    useEffect(() => {
-        loadWalletData();
-    }, []);
-
     const loadWalletData = async () => {
         setLoading(true);
         const supabase = createClient();
@@ -74,6 +70,11 @@ export default function WalletPage() {
         setWithdrawals(withdrawalData);
         setLoading(false);
     };
+
+    useEffect(() => {
+        loadWalletData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
 
     const handleWithdraw = async () => {
         const amount = parseFloat(withdrawAmount);

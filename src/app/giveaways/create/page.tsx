@@ -10,6 +10,7 @@ import { AppHeader } from "@/components/app-header";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { walletService, Wallet } from "@/lib/wallet-service";
 import { TrustTier } from "@/lib/trust-engine";
+import { createClient } from "@/lib/supabase";
 import {
     ArrowLeft,
     Trophy,
@@ -92,6 +93,7 @@ export default function CreateGiveawayPage() {
     const [error, setError] = useState<string | null>(null);
     const [wallet, setWallet] = useState<Wallet | null>(null);
     const [allowSharing, setAllowSharing] = useState(true);
+    const [profileComplete, setProfileComplete] = useState(false);
 
     // Advanced mode form
     const [form, setForm] = useState({
@@ -106,20 +108,43 @@ export default function CreateGiveawayPage() {
         prevent_previous_winners_hours: 0,
     });
 
-    // Load wallet balance on mount
-    useEffect(() => {
-        loadWallet();
-    }, []);
-
-    const loadWallet = async () => {
+    const loadData = async () => {
         setLoadingWallet(true);
         const walletData = await walletService.getWallet();
         setWallet(walletData);
+
+        // Check FPS Profile Completion Requirement
+        const supabase = createClient();
+        const { data: { user } } = await supabase.auth.getUser();
+        if (user) {
+            const { data: profile } = await supabase
+                .from('profiles')
+                .select('display_name, phone')
+                .eq('id', user.id)
+                .single();
+
+            if (profile && profile.display_name && profile.phone) {
+                setProfileComplete(true);
+            }
+        }
+
         setLoadingWallet(false);
     };
 
+    // Load wallet and profile data on mount
+    useEffect(() => {
+        loadData();
+        // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
     // Quick create with preset
     const handleQuickCreate = async (amount: number) => {
+        // Enforce FPS Rules
+        if (!profileComplete) {
+            setError("Fair Play System: Your profile is incomplete. Please add your phone number and display name in Settings.");
+            return;
+        }
+
         // Check balance first
         if (!wallet || wallet.balance < amount) {
             setError(`Insufficient balance. You need ₦${amount.toLocaleString()} to create this giveaway.`);
@@ -160,6 +185,12 @@ export default function CreateGiveawayPage() {
     // Advanced create
     const handleAdvancedCreate = async (e: React.FormEvent) => {
         e.preventDefault();
+
+        // Enforce FPS Rules
+        if (!profileComplete) {
+            setError("Fair Play System: Your profile is incomplete. Please add your phone number and display name in Settings.");
+            return;
+        }
 
         // Check balance first
         if (!wallet || wallet.balance < form.prize_amount) {
@@ -281,6 +312,35 @@ export default function CreateGiveawayPage() {
                         </div>
                     )}
                 </motion.div>
+
+                {/* Profile Completion FPS Warning */}
+                <AnimatePresence>
+                    {!loadingWallet && !profileComplete && (
+                        <motion.div
+                            initial={{ opacity: 0, height: 0 }}
+                            animate={{ opacity: 1, height: 'auto' }}
+                            className="mb-6 overflow-hidden"
+                        >
+                            <div className="p-4 rounded-xl bg-orange-500/10 border border-orange-500/30 flex flex-col sm:flex-row items-start sm:items-center gap-4 justify-between">
+                                <div className="flex items-start gap-3">
+                                    <AlertCircle className="w-5 h-5 text-orange-400 mt-0.5 shrink-0" />
+                                    <div>
+                                        <p className="font-medium text-orange-400">Profile Incomplete</p>
+                                        <p className="text-sm text-orange-400/80">
+                                            The Fair Play System requires a complete profile (Phone Num & Name) to be able to host giveaways.
+                                        </p>
+                                    </div>
+                                </div>
+                                <Link href="/settings" className="w-full sm:w-auto shrink-0">
+                                    <Button className="w-full sm:w-auto bg-orange-500 hover:bg-orange-600 text-white">
+                                        <Settings className="w-4 h-4 mr-2" />
+                                        Complete Profile
+                                    </Button>
+                                </Link>
+                            </div>
+                        </motion.div>
+                    )}
+                </AnimatePresence>
 
                 {/* Mode Toggle */}
                 <motion.div

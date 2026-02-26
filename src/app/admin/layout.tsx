@@ -8,7 +8,8 @@ import {
     Gift,
     Wallet,
     LogOut,
-    ShieldCheck
+    ShieldCheck,
+    BadgeCheck
 } from 'lucide-react';
 
 export default async function AdminLayout({
@@ -47,6 +48,7 @@ export default async function AdminLayout({
                     <NavLink href="/admin/users" icon={<Users />}>Users</NavLink>
                     <NavLink href="/admin/giveaways" icon={<Gift />}>Giveaways</NavLink>
                     <NavLink href="/admin/finance" icon={<Wallet />}>Finance</NavLink>
+                    <NavLink href="/admin/kyc" icon={<BadgeCheck />}>KYC Verifications</NavLink>
                 </nav>
 
                 <div className="p-4 border-t border-slate-800">

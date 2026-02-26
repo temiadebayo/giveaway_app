@@ -8,7 +8,7 @@ export default async function AdminDashboard() {
         <div className="space-y-8">
             <div>
                 <h1 className="text-3xl font-bold mb-2">Dashboard Overview</h1>
-                <p className="text-slate-400">Welcome back, Admin. Here's what's happening.</p>
+                <p className="text-slate-400">Welcome back, Admin. Here&apos;s what&apos;s happening.</p>
             </div>
 
             {/* Stats Grid */}

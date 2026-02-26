@@ -52,8 +52,92 @@ export interface UserDevice {
     last_used_at: string;
 }
 
+export type KycStatus = 'pending' | 'approved' | 'rejected' | 'none';
+
+export interface KycRequest {
+    id: string;
+    user_id: string;
+    status: KycStatus;
+    rejection_reason?: string;
+    created_at: string;
+}
+
 class TrustService {
     private supabase = createClient();
+
+    /**
+     * Get the user's current KYC Request status
+     */
+    async getKycStatus(): Promise<KycRequest | null> {
+        const { data: { user } } = await this.supabase.auth.getUser();
+        if (!user) return null;
+
+        const { data, error } = await this.supabase
+            .from('kyc_requests')
+            .select('*')
+            .eq('user_id', user.id)
+            .order('created_at', { ascending: false })
+            .limit(1)
+            .single();
+
+        if (error && error.code !== 'PGRST116') {
+            console.error('Error fetching KYC status:', error);
+            return null;
+        }
+
+        return data as KycRequest | null;
+    }
+
+    /**
+     * Submit a new KYC Request (Uploads files to storage bucket and creates DB row)
+     */
+    async submitKycRequest(idCardFile: File, selfieFile: File): Promise<{ success: boolean; error?: string }> {
+        const { data: { user } } = await this.supabase.auth.getUser();
+        if (!user) return { success: false, error: 'User not authenticated' };
+
+        try {
+            const timestamp = Date.now();
+
+            // 1. Upload ID Card
+            const idPath = `${user.id}/id_card_${timestamp}.jpg`;
+            const { error: idUploadError } = await this.supabase.storage
+                .from('kyc_documents')
+                .upload(idPath, idCardFile, {
+                    cacheControl: '3600',
+                    upsert: true
+                });
+
+            if (idUploadError) throw new Error(`ID Upload failed: ${idUploadError.message}`);
+
+            // 2. Upload Selfie
+            const selfiePath = `${user.id}/selfie_${timestamp}.jpg`;
+            const { error: selfieUploadError } = await this.supabase.storage
+                .from('kyc_documents')
+                .upload(selfiePath, selfieFile, {
+                    cacheControl: '3600',
+                    upsert: true
+                });
+
+            if (selfieUploadError) throw new Error(`Selfie Upload failed: ${selfieUploadError.message}`);
+
+            // 3. Create KYC Request Row
+            const { error: dbError } = await this.supabase
+                .from('kyc_requests')
+                .insert({
+                    user_id: user.id,
+                    id_card_url: idPath,
+                    selfie_url: selfiePath,
+                    status: 'pending'
+                });
+
+            if (dbError) throw new Error(`Database insertion failed: ${dbError.message}`);
+
+            return { success: true };
+        } catch (error: any) {
+            console.error('KYC Submission Error:', error);
+            return { success: false, error: error.message || 'An unexpected error occurred' };
+        }
+    }
 
     /**
      * Get current user's profile

@@ -439,7 +439,7 @@ class GiveawayService {
                 title: giveaway.title,
                 description: giveaway.description,
                 prize_amount: giveaway.prize_amount,
-                prize_currency: giveaway.prize_currency || 'USD',
+                prize_currency: giveaway.prize_currency || 'NGN',
                 game_type: giveaway.game_type || 'tap',
                 game_duration_seconds: giveaway.game_duration_seconds || 30,
                 min_trust_tier: giveaway.min_trust_tier || 'bronze',

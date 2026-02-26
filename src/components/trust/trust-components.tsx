@@ -226,7 +226,7 @@ export function ImprovementTips({ tips }: ImprovementTipsProps) {
             <div className="card-premium p-6">
                 <div className="text-center py-4">
                     <Crown className="w-12 h-12 mx-auto mb-2 text-yellow-400" />
-                    <p className="font-bold">You're maxed out!</p>
+                    <p className="font-bold">You&apos;re maxed out!</p>
                     <p className="text-sm text-white/40">No improvements available</p>
                 </div>
             </div>

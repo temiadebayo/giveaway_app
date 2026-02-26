@@ -187,8 +187,8 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const formatPrize = (amount: number, currency: string = 'USD') => {
-        return new Intl.NumberFormat('en-US', {
+    const formatPrize = (amount: number, currency: string = 'NGN') => {
+        return new Intl.NumberFormat('en-NG', {
             style: 'currency',
             currency,
             minimumFractionDigits: 0,

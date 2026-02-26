@@ -3,6 +3,7 @@
 import { useState, useEffect } from "react";
 import Link from "next/link";
 import Image from "next/image";
+import { useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase";
 import { User } from "@supabase/supabase-js";
@@ -27,6 +28,7 @@ interface Profile {
     display_name: string | null;
     avatar_url: string | null;
     trust_tier: string;
+    accepted_tos?: boolean;
 }
 
 interface AppHeaderProps {
@@ -49,6 +51,9 @@ export function AppHeader({
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
 
+    const router = useRouter();
+    const pathname = usePathname();
+
     useEffect(() => {
         const loadUser = async () => {
             const supabase = createClient();
@@ -58,14 +63,19 @@ export function AppHeader({
             if (user) {
                 const { data: profile } = await supabase
                     .from("profiles")
-                    .select("username, display_name, avatar_url, trust_tier")
+                    .select("username, display_name, avatar_url, trust_tier, accepted_tos")
                     .eq("id", user.id)
                     .single();
                 setProfile(profile);
+
+                // Enforce Terms of Service compliance
+                if (profile && profile.accepted_tos === false && pathname !== '/terms') {
+                    router.push('/terms');
+                }
             }
         };
         loadUser();
-    }, []);
+    }, [pathname, router]);
 
     const handleSignOut = async () => {
         const supabase = createClient();

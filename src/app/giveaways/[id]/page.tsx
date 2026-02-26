@@ -432,7 +432,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
             try {
                 await navigator.share({
                     title: giveaway?.title || 'Join this Giveaway!',
-                    text: `Win ${formatPrize(giveaway?.prize_amount || 0, giveaway?.prize_currency || 'USD')}! 🎉`,
+                    text: `Win ${formatPrize(giveaway?.prize_amount || 0, giveaway?.prize_currency || 'NGN')}! 🎉`,
                     url
                 });
             } catch {
@@ -450,8 +450,8 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
         setTimeout(() => setCopied(false), 2000);
     };
 
-    const formatPrize = (amount: number, currency: string = 'USD') => {
-        return new Intl.NumberFormat('en-US', {
+    const formatPrize = (amount: number, currency: string = 'NGN') => {
+        return new Intl.NumberFormat('en-NG', {
             style: 'currency',
             currency,
             minimumFractionDigits: 0,
@@ -660,7 +660,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                     <div>
                                         <p className="font-medium text-blue-400">Playing as Guest</p>
                                         <p className="text-sm text-white/60">
-                                            You can play, but you'll need to sign up to claim any winnings!
+                                            You can play, but you&apos;ll need to sign up to claim any winnings!
                                         </p>
                                     </div>
                                 </div>
@@ -897,7 +897,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                                     <div className="text-center mb-6">
                                                         <div className="inline-flex items-center gap-2 px-6 py-3 rounded-full bg-green-500/20 border border-green-500/50 mb-3">
                                                             <Sparkles className="w-5 h-5 text-green-400 animate-pulse" />
-                                                            <span className="font-bold text-green-400">You're In!</span>
+                                                            <span className="font-bold text-green-400">You&apos;re In!</span>
                                                         </div>
                                                         <p className="text-white/60">
                                                             {startCountdown !== null && startCountdown > 0
@@ -1187,7 +1187,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                     <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-r from-green-400 to-emerald-500 flex items-center justify-center">
                                         <Sparkles className="w-10 h-10 text-white" />
                                     </div>
-                                    <h3 className="text-xl sm:text-2xl font-bold mb-2">You're In! 🎮</h3>
+                                    <h3 className="text-xl sm:text-2xl font-bold mb-2">You&apos;re In! 🎮</h3>
                                     <p className="text-white/60 mb-6">
                                         {giveaway.game_duration_seconds} seconds to tap as fast as you can!
                                     </p>
@@ -1278,7 +1278,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                     <div className="w-20 h-20 mx-auto mb-6 rounded-full bg-gradient-to-r from-purple-500 to-pink-500 flex items-center justify-center">
                                         <Eye className="w-10 h-10 text-white" />
                                     </div>
-                                    <h3 className="text-xl sm:text-2xl font-bold mb-2">You're Done!</h3>
+                                    <h3 className="text-xl sm:text-2xl font-bold mb-2">You&apos;re Done!</h3>
                                     <p className="text-2xl sm:text-4xl font-black text-primary mb-2">
                                         {currentScore.toLocaleString()} score
                                     </p>

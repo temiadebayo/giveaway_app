@@ -85,12 +85,13 @@ export function TapGame({
     // Auto-start on mount when autoStart is true
     useEffect(() => {
         if (autoStart && gameRef.current) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
             startGame();
         }
     }, [autoStart, startGame]);
 
     // Handle tap
-    const handleTap = useCallback((e: React.MouseEvent | React.TouchEvent) => {
+    const handleTap = (e: React.MouseEvent | React.TouchEvent) => {
         if (!gameState?.isPlaying || disabled) return;
 
         const rect = tapAreaRef.current?.getBoundingClientRect();
@@ -118,7 +119,7 @@ export function TapGame({
 
             onScoreUpdate?.(gameState.score + result.points);
         }
-    }, [gameState?.isPlaying, gameState?.score, disabled, onScoreUpdate]);
+    };
 
     // Format time
     const formatTime = (seconds: number) => {
