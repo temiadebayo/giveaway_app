@@ -32,8 +32,8 @@ import {
 // Preset tiers (in dollars)
 const PRESET_TIERS = [
     {
-        amount: 100,
-        label: "$100",
+        amount: 50000,
+        label: "₦50K",
         icon: Star,
         color: "from-blue-500 to-cyan-400",
         bgColor: "bg-blue-500/10",
@@ -42,28 +42,28 @@ const PRESET_TIERS = [
         description: "Starter Pack"
     },
     {
-        amount: 500,
-        label: "$500",
+        amount: 100000,
+        label: "₦100K",
         icon: Trophy,
         color: "from-green-500 to-emerald-400",
         bgColor: "bg-green-500/10",
         borderColor: "border-green-500/30",
-        popular: false,
+        popular: true,
         description: "Community Boost"
     },
     {
-        amount: 1000,
-        label: "$1K",
+        amount: 250000,
+        label: "₦250K",
         icon: Zap,
         color: "from-yellow-500 to-orange-400",
         bgColor: "bg-yellow-500/10",
         borderColor: "border-yellow-500/30",
-        popular: true,
+        popular: false,
         description: "Mega Giveaway"
     },
     {
-        amount: 5000,
-        label: "$5K",
+        amount: 500000,
+        label: "₦500K",
         icon: Crown,
         color: "from-pink-500 to-purple-400",
         bgColor: "bg-pink-500/10",
@@ -72,8 +72,8 @@ const PRESET_TIERS = [
         description: "Premium Event"
     },
     {
-        amount: 10000,
-        label: "$10K",
+        amount: 1000000,
+        label: "₦1M",
         icon: Gem,
         color: "from-purple-500 to-indigo-400",
         bgColor: "bg-purple-500/10",
@@ -97,7 +97,7 @@ export default function CreateGiveawayPage() {
     const [form, setForm] = useState({
         title: '',
         description: '',
-        prize_amount: 100,
+        prize_amount: 50000,
         game_type: 'tap' as const,
         game_duration_seconds: 30,
         min_trust_tier: 'bronze' as TrustTier,
@@ -122,7 +122,7 @@ export default function CreateGiveawayPage() {
     const handleQuickCreate = async (amount: number) => {
         // Check balance first
         if (!wallet || wallet.balance < amount) {
-            setError(`Insufficient balance. You need $${amount.toLocaleString()} to create this giveaway.`);
+            setError(`Insufficient balance. You need ₦${amount.toLocaleString()} to create this giveaway.`);
             return;
         }
 
@@ -148,7 +148,7 @@ export default function CreateGiveawayPage() {
             router.push(`/giveaways/${result.giveaway_id}/host`);
         } else {
             if (result.error?.includes('Insufficient balance')) {
-                setError(`Insufficient balance. You have $${result.balance?.toLocaleString() || 0}, need $${result.required?.toLocaleString() || amount}`);
+                setError(`Insufficient balance. You have ₦${result.balance?.toLocaleString() || 0}, need ₦${result.required?.toLocaleString() || amount}`);
             } else {
                 setError(result.error || 'Failed to create giveaway');
             }
@@ -163,7 +163,7 @@ export default function CreateGiveawayPage() {
 
         // Check balance first
         if (!wallet || wallet.balance < form.prize_amount) {
-            setError(`Insufficient balance. You need $${form.prize_amount.toLocaleString()} to create this giveaway.`);
+            setError(`Insufficient balance. You need ₦${form.prize_amount.toLocaleString()} to create this giveaway.`);
             return;
         }
 
@@ -202,9 +202,9 @@ export default function CreateGiveawayPage() {
     const durations = [15, 30, 45, 60];
 
     const formatCurrency = (amount: number) => {
-        return new Intl.NumberFormat('en-US', {
+        return new Intl.NumberFormat('en-NG', {
             style: 'currency',
-            currency: 'USD',
+            currency: 'NGN',
             minimumFractionDigits: 0
         }).format(amount);
     };
@@ -446,7 +446,7 @@ export default function CreateGiveawayPage() {
                                 <Input
                                     value={form.title}
                                     onChange={(e) => setForm({ ...form, title: e.target.value })}
-                                    placeholder="e.g., Epic $100 Tap Challenge!"
+                                    placeholder="e.g., Epic ₦50K Tap Challenge!"
                                     required
                                 />
                             </div>

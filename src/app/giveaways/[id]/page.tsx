@@ -573,7 +573,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
 
                         {/* Guest indicator */}
                         {isGuest && (
-                            <Link href="/auth">
+                            <Link href="/login">
                                 <Button variant="outline" size="sm" className="gap-2">
                                     <LogIn className="w-4 h-4" />
                                     Sign In
@@ -700,7 +700,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
 
                                             <div className="flex flex-col sm:flex-row gap-4 justify-center">
                                                 {isGuest ? (
-                                                    <Link href="/auth">
+                                                    <Link href="/login">
                                                         <Button className="bg-yellow-500 hover:bg-yellow-600 text-black px-8 py-6 text-lg font-bold rounded-2xl glow-primary transition-all hover:scale-105 active:scale-95">
                                                             <LogIn className="w-6 h-6 mr-2" />
                                                             Sign In to Claim
@@ -711,8 +711,8 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                                         onClick={handleClaim}
                                                         disabled={isClaiming || !!isPrizeClaimed}
                                                         className={`px-8 py-6 text-lg font-bold rounded-2xl transition-all hover:scale-105 active:scale-95 glow-primary ${isPrizeClaimed
-                                                                ? "bg-slate-700 text-white/50 cursor-default"
-                                                                : "bg-brand-gradient text-white"
+                                                            ? "bg-slate-700 text-white/50 cursor-default"
+                                                            : "bg-brand-gradient text-white"
                                                             }`}
                                                     >
                                                         {isClaiming ? (
@@ -763,7 +763,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                             {isGuest && guestParticipation && (
                                                 <div className="mt-6 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
                                                     <p className="text-yellow-400 font-medium mb-2">Create an account to track your stats!</p>
-                                                    <Link href="/auth">
+                                                    <Link href="/login">
                                                         <Button className="bg-yellow-500 hover:bg-yellow-600 text-black">
                                                             <LogIn className="w-4 h-4 mr-2" />
                                                             Sign Up Now
@@ -1131,7 +1131,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                                     </Button>
                                                     <p className="text-sm text-white/40">
                                                         or{' '}
-                                                        <Link href="/auth" className="text-primary underline">
+                                                        <Link href="/login" className="text-primary underline">
                                                             sign in
                                                         </Link>
                                                         {' '}to claim prizes
@@ -1150,7 +1150,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                                 </Button>
                                                 <p className="text-sm text-white/40">
                                                     or{' '}
-                                                    <Link href="/auth" className="text-primary underline">
+                                                    <Link href="/login" className="text-primary underline">
                                                         sign in
                                                     </Link>
                                                     {' '}to claim prizes
@@ -1297,7 +1297,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                             <p className="text-yellow-400 font-medium mb-2">
                                                 Sign up to claim your prize if you win! 🏆
                                             </p>
-                                            <Link href="/auth">
+                                            <Link href="/login">
                                                 <Button size="sm" className="bg-yellow-500 hover:bg-yellow-600 text-black">
                                                     <LogIn className="w-4 h-4 mr-2" />
                                                     Create Account

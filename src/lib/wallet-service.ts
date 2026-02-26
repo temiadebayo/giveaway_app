@@ -102,11 +102,45 @@ class WalletService {
         const { data: { user } } = await this.supabase.auth.getUser();
         if (!user) return null;
 
-        const { data, error } = await this.supabase
+        let { data, error } = await this.supabase
             .from('wallets')
             .insert({ user_id: user.id })
             .select()
             .single();
+
+        // 23503 = foreign_key_violation (missing profile row)
+        if (error && error.code === '23503') {
+            console.warn('Profile row missing for wallet creation. Creating fallback profile...');
+
+            // 1. Create the missing profile
+            const username = user.user_metadata?.username || user.email?.split('@')[0] || `user_${user.id.substring(0, 8)}`;
+            const displayName = user.user_metadata?.full_name || user.user_metadata?.name || username;
+
+            const { error: profileError } = await this.supabase
+                .from('profiles')
+                .insert({
+                    id: user.id,
+                    email: user.email,
+                    username: username,
+                    display_name: displayName,
+                    avatar_url: user.user_metadata?.avatar_url
+                });
+
+            if (profileError) {
+                console.error('Failed to create fallback profile:', profileError);
+                return null;
+            }
+
+            // 2. Retry creating the wallet now that profile exists
+            const retryRes = await this.supabase
+                .from('wallets')
+                .insert({ user_id: user.id })
+                .select()
+                .single();
+
+            data = retryRes.data;
+            error = retryRes.error;
+        }
 
         if (error) {
             console.error('Error creating wallet:', error.message, error.code, error.details);

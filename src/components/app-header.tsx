@@ -70,7 +70,7 @@ export function AppHeader({
     const handleSignOut = async () => {
         const supabase = createClient();
         await supabase.auth.signOut();
-        window.location.href = "/auth";
+        window.location.href = "/login";
     };
 
     const getInitials = () => {
@@ -227,7 +227,7 @@ export function AppHeader({
                             </>
                         ) : (
                             <Link
-                                href="/auth"
+                                href="/login"
                                 className="px-4 py-2 rounded-lg bg-primary text-white text-sm font-medium hover:bg-primary/90 transition-colors"
                             >
                                 Sign In

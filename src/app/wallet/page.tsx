@@ -43,6 +43,7 @@ export default function WalletPage() {
     const [showDeposit, setShowDeposit] = useState(false);
     const [depositAmount, setDepositAmount] = useState("");
     const [depositResult, setDepositResult] = useState<{ reference_code: string; amount: number } | null>(null);
+    const [depositError, setDepositError] = useState<string | null>(null);
     const [username, setUsername] = useState<string>("");
 
     useEffect(() => {
@@ -107,6 +108,7 @@ export default function WalletPage() {
         if (isNaN(amount) || amount <= 0) return;
 
         setLoading(true);
+        setDepositError(null);
         const supabase = createClient();
 
         const { data, error } = await supabase.rpc('request_deposit', { p_amount: amount });
@@ -115,13 +117,15 @@ export default function WalletPage() {
 
         if (error) {
             console.error(error);
-            // Could add error state here
+            setDepositError(error.message || "Failed to initiate deposit");
         } else if (data && data.success) {
             setDepositResult({
                 reference_code: data.reference_code,
                 amount: data.amount
             });
             // Keep modal open to show instructions
+        } else if (data && !data.success) {
+            setDepositError(data.error || "Deposit request failed");
         }
     };
 
@@ -424,6 +428,14 @@ export default function WalletPage() {
                                         </div>
                                     </div>
 
+                                    {/* Error */}
+                                    {depositError && (
+                                        <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 mb-4">
+                                            <AlertCircle className="w-4 h-4 flex-shrink-0 text-red-500" />
+                                            <p className="text-sm text-red-500 font-medium">{depositError}</p>
+                                        </div>
+                                    )}
+
                                     {/* Support */}
                                     <p className="text-xs text-white/30 mb-4 text-center">
                                         Issues? Contact <a href={`mailto:${BANK_DETAILS.supportEmail}`} className="text-primary underline">{BANK_DETAILS.supportEmail}</a>
@@ -480,6 +492,7 @@ export default function WalletPage() {
                                             setShowDeposit(false);
                                             setDepositResult(null);
                                             setDepositAmount("");
+                                            setDepositError(null);
                                             loadWalletData();
                                         }}
                                     >

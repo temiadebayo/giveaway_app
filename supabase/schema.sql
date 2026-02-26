@@ -34,9 +34,11 @@ CREATE TABLE IF NOT EXISTS public.profiles (
 ALTER TABLE public.profiles ENABLE ROW LEVEL SECURITY;
 
 -- Policies
+DROP POLICY IF EXISTS "Users can view own profile" ON public.profiles;
 CREATE POLICY "Users can view own profile" ON public.profiles
     FOR SELECT USING (auth.uid() = id);
 
+DROP POLICY IF EXISTS "Users can update own profile" ON public.profiles;
 CREATE POLICY "Users can update own profile" ON public.profiles
     FOR UPDATE USING (auth.uid() = id);
 
@@ -63,6 +65,7 @@ CREATE TABLE IF NOT EXISTS public.device_fingerprints (
 ALTER TABLE public.device_fingerprints ENABLE ROW LEVEL SECURITY;
 
 -- Allow service role to manage fingerprints
+DROP POLICY IF EXISTS "Service role can manage fingerprints" ON public.device_fingerprints;
 CREATE POLICY "Service role can manage fingerprints" ON public.device_fingerprints
     FOR ALL USING (true);
 
@@ -86,6 +89,7 @@ CREATE TABLE IF NOT EXISTS public.user_devices (
 ALTER TABLE public.user_devices ENABLE ROW LEVEL SECURITY;
 
 -- Policies
+DROP POLICY IF EXISTS "Users can view own devices" ON public.user_devices;
 CREATE POLICY "Users can view own devices" ON public.user_devices
     FOR SELECT USING (auth.uid() = user_id);
 
@@ -108,6 +112,7 @@ CREATE TABLE IF NOT EXISTS public.trust_events (
 ALTER TABLE public.trust_events ENABLE ROW LEVEL SECURITY;
 
 -- Policies
+DROP POLICY IF EXISTS "Users can view own trust events" ON public.trust_events;
 CREATE POLICY "Users can view own trust events" ON public.trust_events
     FOR SELECT USING (auth.uid() = user_id);
 
@@ -261,9 +266,11 @@ CREATE TABLE IF NOT EXISTS public.giveaways (
 ALTER TABLE public.giveaways ENABLE ROW LEVEL SECURITY;
 
 -- Policies
+DROP POLICY IF EXISTS "Anyone can view active giveaways" ON public.giveaways;
 CREATE POLICY "Anyone can view active giveaways" ON public.giveaways
     FOR SELECT USING (status IN ('scheduled', 'live', 'ended'));
 
+DROP POLICY IF EXISTS "Hosts can manage own giveaways" ON public.giveaways;
 CREATE POLICY "Hosts can manage own giveaways" ON public.giveaways
     FOR ALL USING (auth.uid() = host_id);
 
@@ -289,6 +296,7 @@ CREATE TABLE IF NOT EXISTS public.giveaway_participants (
 ALTER TABLE public.giveaway_participants ENABLE ROW LEVEL SECURITY;
 
 -- Policies
+DROP POLICY IF EXISTS "Users can view participants in their giveaways" ON public.giveaway_participants;
 CREATE POLICY "Users can view participants in their giveaways" ON public.giveaway_participants
     FOR SELECT USING (
         EXISTS (
@@ -297,6 +305,7 @@ CREATE POLICY "Users can view participants in their giveaways" ON public.giveawa
         )
     );
 
+DROP POLICY IF EXISTS "Users can manage own participation" ON public.giveaway_participants;
 CREATE POLICY "Users can manage own participation" ON public.giveaway_participants
     FOR ALL USING (auth.uid() = user_id);
 
@@ -393,5 +402,16 @@ CREATE INDEX IF NOT EXISTS idx_participants_score ON public.giveaway_participant
 -- =============================================
 -- 15. ENABLE REALTIME for leaderboards
 -- =============================================
-ALTER PUBLICATION supabase_realtime ADD TABLE public.giveaway_participants;
-ALTER PUBLICATION supabase_realtime ADD TABLE public.giveaways;
+DO $$ 
+BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.giveaway_participants;
+EXCEPTION WHEN duplicate_object THEN
+    -- Already added
+END $$;
+
+DO $$ 
+BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.giveaways;
+EXCEPTION WHEN duplicate_object THEN
+    -- Already added
+END $$;
