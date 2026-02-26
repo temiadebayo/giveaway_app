@@ -15,6 +15,17 @@ export const metadata: Metadata = {
   description: "The ultimate skill-based giveaway platform. Compete, win, and flex. Built for the culture.",
   keywords: ["giveaway", "contests", "skill-based", "gaming", "prizes", "win"],
   authors: [{ name: "Giveaway App" }],
+  icons: {
+    icon: [
+      { url: "/favicon.png", sizes: "any" },
+      { url: "/favicon.png", type: "image/png", sizes: "32x32" },
+      { url: "/favicon.png", type: "image/png", sizes: "16x16" },
+    ],
+    apple: [
+      { url: "/favicon.png", sizes: "180x180" },
+    ],
+    shortcut: "/favicon.png",
+  },
   openGraph: {
     title: "Giveaway App - Skill-Based Giveaways",
     description: "The ultimate skill-based giveaway platform. Compete, win, and flex.",

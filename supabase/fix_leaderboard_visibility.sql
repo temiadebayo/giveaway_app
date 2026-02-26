@@ -61,4 +61,4 @@ WHERE gp.linked_user_id IS NULL;
 -- 3. Verify permissions (Ensure the API can read this view)
 GRANT SELECT ON public.combined_leaderboard TO anon, authenticated, service_role;
 
-SELECT 'Leaderboard view updated and Realtime enabled!' as result;
+SELECT 'Leaderboard view updated and Realtime enabled!' as result;  
