@@ -51,7 +51,7 @@ export default function AppTermsPage() {
                 .update({ accepted_tos: true })
                 .eq('id', user.id);
 
-            router.push('/');
+            router.push('/dashboard');
         }
     };
 
@@ -231,7 +231,7 @@ export default function AppTermsPage() {
                     </motion.div>
                 ) : (
                     <div className="text-center">
-                        <Button variant="outline" onClick={() => router.push('/')}>
+                        <Button variant="outline" onClick={() => router.push('/dashboard')}>
                             Return to Dashboard
                         </Button>
                     </div>
