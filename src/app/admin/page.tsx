@@ -1,8 +1,15 @@
 import { adminService } from '@/lib/admin-service';
 import { Users, Gift, TrendingUp, DollarSign } from 'lucide-react';
+import { AdminQuickStats } from './components/AdminQuickStats';
 
 export default async function AdminDashboard() {
     const stats = await adminService.getStats();
+
+    // Fetch initial data for the realtime widgets
+    const [pendingDeposits, pendingWithdrawals] = await Promise.all([
+        adminService.getPendingDeposits(),
+        adminService.getPendingWithdrawals()
+    ]);
 
     return (
         <div className="space-y-8">
@@ -39,13 +46,21 @@ export default async function AdminDashboard() {
 
             {/* Recent Activity Section could go here */}
             <div className="grid lg:grid-cols-2 gap-8">
-                <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800">
+                <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 h-fit">
                     <h2 className="text-xl font-bold mb-4">System Health</h2>
                     <div className="space-y-4">
                         <HealthItem label="Database" status="Healthy" color="bg-green-500" />
                         <HealthItem label="Realtime Connections" status="Active" color="bg-green-500" />
                         <HealthItem label="Payments" status="Manual Mode" color="bg-yellow-500" />
                     </div>
+                </div>
+
+                {/* Real-time Widget */}
+                <div className="col-span-1">
+                    <AdminQuickStats
+                        initialDeposits={pendingDeposits || []}
+                        initialWithdrawals={pendingWithdrawals || []}
+                    />
                 </div>
             </div>
         </div>
