@@ -30,7 +30,10 @@ export default function SettingsPage() {
     const [profile, setProfile] = useState({
         username: "",
         display_name: "",
-        phone: ""
+        phone: "",
+        bank_name: "",
+        account_name: "",
+        account_number: ""
     });
 
     useEffect(() => {
@@ -51,7 +54,7 @@ export default function SettingsPage() {
 
         const { data, error } = await supabase
             .from('profiles')
-            .select('username, display_name, phone')
+            .select('username, display_name, phone, bank_name, account_name, account_number')
             .eq('id', user.id)
             .single();
 
@@ -59,7 +62,10 @@ export default function SettingsPage() {
             setProfile({
                 username: data.username || "",
                 display_name: data.display_name || "",
-                phone: data.phone || ""
+                phone: data.phone || "",
+                bank_name: data.bank_name || "",
+                account_name: data.account_name || "",
+                account_number: data.account_number || ""
             });
         }
         setLoading(false);
@@ -85,6 +91,9 @@ export default function SettingsPage() {
                     username: profile.username.trim(),
                     display_name: profile.display_name.trim(),
                     phone: profile.phone.trim(),
+                    bank_name: profile.bank_name.trim(),
+                    account_name: profile.account_name.trim(),
+                    account_number: profile.account_number.trim(),
                     updated_at: new Date().toISOString()
                 })
                 .eq('id', user.id);

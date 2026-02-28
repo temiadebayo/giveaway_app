@@ -196,7 +196,7 @@ class WalletService {
     /**
      * Request a withdrawal
      */
-    async requestWithdrawal(amount: number): Promise<{
+    async requestWithdrawal(amount: number, payoutDetails?: { bank_name: string; account_name: string; account_number: string }): Promise<{
         success: boolean;
         withdrawal_id?: string;
         net_amount?: number;
@@ -208,7 +208,8 @@ class WalletService {
             .rpc('request_withdrawal', {
                 p_amount: amount,
                 p_fee_percentage: WITHDRAWAL_FEE_PERCENT,
-                p_hold_hours: WITHDRAWAL_HOLD_HOURS
+                p_hold_hours: WITHDRAWAL_HOLD_HOURS,
+                p_payout_details: payoutDetails ? JSON.stringify(payoutDetails) : null
             });
 
         if (error) {

@@ -267,10 +267,7 @@ export default function SignupPage() {
 
                     {/* Footer */}
                     <p className="text-center text-white/40 text-sm mt-8">
-                        Already have an account?{" "}
-                        <Link href="/login" className="text-primary hover:underline font-medium">
-                            Sign in
-                        </Link>
+                        Built by <a href="https://www.techjack.site" className="text-primary hover:underline font-medium">tECh jAcK</a>
                     </p>
                 </div>
 

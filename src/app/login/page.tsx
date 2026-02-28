@@ -258,10 +258,7 @@ function LoginPageContent() {
 
                     {/* Footer */}
                     <p className="text-center text-white/40 text-sm mt-8">
-                        Don&apos;t have an account?{" "}
-                        <Link href="/signup" className="text-primary hover:underline font-medium">
-                            Sign up
-                        </Link>
+                        Built by <a href="https://www.techjack.site" className="text-primary hover:underline font-medium">tECh jAcK</a>
                     </p>
                 </div>
 
