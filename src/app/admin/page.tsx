@@ -1,9 +1,7 @@
 import { adminService } from '@/lib/admin-service';
 import { Users, Gift, TrendingUp, Banknote, Activity, Database, Radio, CreditCard } from 'lucide-react';
 import { AdminQuickStats } from './components/AdminQuickStats';
-import { HealthItem } from '@/components/admin/admin-health-item';
 import { AdminLiveFeed } from '@/components/admin/admin-live-feed';
-
 export default async function AdminDashboard() {
     const stats = await adminService.getStats();
 
@@ -109,6 +107,21 @@ function StatCard({ label, value, subValue, icon, iconColor, iconBg, borderAccen
             <h3 className="text-xl md:text-2xl font-black text-white mb-0.5 truncate">{value}</h3>
             <p className="text-xs text-slate-500 font-medium">{label}</p>
             {subValue && <p className="text-[10px] text-slate-600 mt-0.5">{subValue}</p>}
+        </div>
+    );
+}
+
+function HealthItem({ label, status, color, icon }: { label: string; status: string; color: string; icon: React.ReactElement }) {
+    return (
+        <div className="flex items-center justify-between p-2.5 rounded-lg bg-slate-800/30 border border-slate-800/40">
+            <div className="flex items-center gap-2.5">
+                {icon}
+                <span className="text-sm font-medium text-slate-300">{label}</span>
+            </div>
+            <div className="flex items-center gap-2">
+                <div className={`w-1.5 h-1.5 rounded-full ${color} animate-pulse`} />
+                <span className="text-xs font-medium text-white">{status}</span>
+            </div>
         </div>
     );
 }

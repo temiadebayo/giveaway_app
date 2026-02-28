@@ -40,7 +40,6 @@ export default async function AdminFinancePage() {
                     <FinanceBulkList 
                         items={pendingDeposits || []}
                         emptyMessage="No pending deposits."
-                        type="deposit"
                         primaryAction={{
                             label: "Approve",
                             icon: <CheckCircle className="w-4 h-4" />,
@@ -86,7 +85,6 @@ export default async function AdminFinancePage() {
                     <FinanceBulkList 
                         items={pendingWithdrawals || []}
                         emptyMessage="No pending withdrawals."
-                        type="withdrawal"
                         primaryAction={{
                             label: "Process",
                             icon: <Clock className="w-4 h-4" />,
@@ -125,7 +123,6 @@ export default async function AdminFinancePage() {
                     <FinanceBulkList 
                         items={processingWithdrawals || []}
                         emptyMessage="No processing withdrawals."
-                        type="processing"
                         primaryAction={{
                             label: "Complete",
                             icon: <CheckCircle className="w-4 h-4" />,

@@ -777,7 +777,10 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
             <LobbyJoinToast
                 giveawayId={id}
                 participants={participants.map(p => ({
-                    user: { username: p.username, display_name: p.display_name },
+                    user: { 
+                        username: p.user?.username || 'Guest', 
+                        display_name: p.user?.display_name || 'Guest' 
+                    },
                     joined_at: p.joined_at
                 }))}
             />
