@@ -125,6 +125,13 @@ export default function Home() {
           </motion.div>
         </motion.div>
       </section>
+
+      {/* Footer */}
+      <footer className="w-full text-center py-8 mt-auto z-10 relative">
+        <p className="text-white/40 text-sm">
+          Built by <a href="https://www.techjack.site" className="text-primary hover:underline font-medium">tECh jAcK</a>
+        </p>
+      </footer>
     </main>
   );
 }
