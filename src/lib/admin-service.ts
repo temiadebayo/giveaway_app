@@ -159,7 +159,7 @@ export const adminService = {
             .from('withdrawal_requests')
             .select(`
                 *,
-                profiles ( email, username, bank_name, account_name, account_number )
+                profiles (*)
             `)
             .eq('status', 'pending')
             .order('created_at', { ascending: false });
@@ -176,7 +176,7 @@ export const adminService = {
             .from('withdrawal_requests')
             .select(`
                 *,
-                profiles ( email, username, bank_name, account_name, account_number )
+                profiles (*)
             `)
             .eq('status', 'processing')
             .order('created_at', { ascending: false });
