@@ -12,7 +12,7 @@ CREATE TABLE IF NOT EXISTS public.giveaways (
     title TEXT NOT NULL,
     description TEXT,
     prize_amount DECIMAL(10,2) NOT NULL,
-    prize_currency TEXT DEFAULT 'USD',
+    prize_currency TEXT DEFAULT 'NGN',
     game_type TEXT DEFAULT 'tap' CHECK (game_type IN ('tap', 'quiz', 'spin')),
     game_duration_seconds INTEGER DEFAULT 30,
     min_trust_tier TEXT DEFAULT 'bronze' CHECK (min_trust_tier IN ('bronze', 'silver', 'gold', 'diamond')),

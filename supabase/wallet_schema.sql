@@ -14,7 +14,7 @@ CREATE TABLE IF NOT EXISTS public.wallets (
     total_earned DECIMAL(12,2) DEFAULT 0,
     total_withdrawn DECIMAL(12,2) DEFAULT 0,
     total_deposited DECIMAL(12,2) DEFAULT 0,
-    currency TEXT DEFAULT 'USD',
+    currency TEXT DEFAULT 'NGN',
     created_at TIMESTAMPTZ DEFAULT NOW(),
     updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -273,7 +273,7 @@ BEGIN
         status, starts_at, ends_at
     )
     VALUES (
-        auth.uid(), p_title, p_description, p_prize_amount, 'USD',
+        auth.uid(), p_title, p_description, p_prize_amount, 'NGN',
         p_game_type, p_duration_seconds, p_min_trust_tier, p_max_participants,
         p_number_of_winners, p_prevent_previous_winners_hours,
         CASE WHEN p_scheduled_start IS NULL THEN 'live' ELSE 'scheduled' END,

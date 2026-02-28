@@ -34,6 +34,7 @@ export default function WalletPage() {
     const [wallet, setWallet] = useState<Wallet | null>(null);
     const [transactions, setTransactions] = useState<WalletTransaction[]>([]);
     const [withdrawals, setWithdrawals] = useState<WithdrawalRequest[]>([]);
+    const [isKycVerified, setIsKycVerified] = useState(false);
     const [loading, setLoading] = useState(true);
 
     // Withdraw State
@@ -61,14 +62,19 @@ export default function WalletPage() {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
 
-        // Fetch username & bank details
+        // Fetch username, bank details, and KYC status
         if (user) {
             const { data: profile } = await supabase
                 .from('profiles')
-                .select('username, bank_name, account_name, account_number')
+                .select('username, bank_name, account_name, account_number, id_verified')
                 .eq('id', user.id)
                 .single();
             if (profile?.username) setUsername(profile.username);
+            
+            if (profile?.id_verified) {
+                setIsKycVerified(true);
+            }
+
             if (profile?.bank_name && profile?.account_name && profile?.account_number) {
                 setBankName(profile.bank_name);
                 setAccountName(profile.account_name);
@@ -104,7 +110,12 @@ export default function WalletPage() {
         }
 
         if (!hasBankDetails && (!bankName || !accountName || !accountNumber)) {
-            setWithdrawError("Please provide your bank details");
+            setWithdrawError("Bank details are missing. Please complete KYC.");
+            return;
+        }
+
+        if (!isKycVerified) {
+            setWithdrawError("Identity verification (KYC) is required before withdrawing.");
             return;
         }
 
@@ -118,17 +129,11 @@ export default function WalletPage() {
             account_number: accountNumber
         };
 
-        // If user didn't have bank details, update their profile too
+        // Since bank details are updated via KYC, we just use the loaded fields.
         if (!hasBankDetails) {
-            const supabase = createClient();
-            const { data: { user } } = await supabase.auth.getUser();
-            if (user) {
-                await supabase
-                    .from('profiles')
-                    .update(payoutDetails)
-                    .eq('id', user.id);
-                setHasBankDetails(true);
-            }
+            setWithdrawError("Bank details missing. Please complete KYC or update your settings.");
+            setWithdrawing(false);
+            return;
         }
 
         const result = await walletService.requestWithdrawal(amount, payoutDetails);
@@ -661,55 +666,44 @@ export default function WalletPage() {
                                 </div>
                             )}
 
-                            {/* Bank Details Collection */}
-                            {withdrawAmountNum > 0 && withdrawAmountNum <= (wallet?.balance || 0) && (
+                            {/* KYC Block / Bank Details Info */}
+                            {!isKycVerified ? (
+                                <div className="p-4 rounded-xl bg-red-500/10 border border-red-500/30 mb-6 space-y-3">
+                                    <div className="flex items-center gap-2 text-red-400 font-bold">
+                                        <Shield className="w-5 h-5" />
+                                        KYC Verification Required
+                                    </div>
+                                    <p className="text-sm text-red-300/80">
+                                        You must complete Identity Verification (KYC) before you can withdraw funds. This ensures security and compliance.
+                                    </p>
+                                    <Link href="/trust/kyc" className="block mt-2">
+                                        <Button className="w-full bg-red-500 hover:bg-red-600 text-white font-bold h-10">
+                                            Verify Identity Now
+                                        </Button>
+                                    </Link>
+                                </div>
+                            ) : withdrawAmountNum > 0 && withdrawAmountNum <= (wallet?.balance || 0) && (
                                 <div className="p-4 rounded-xl bg-white/5 border border-white/10 mb-6 space-y-3">
-                                    <p className="text-sm font-bold text-white mb-2 flex items-center justify-between">
-                                        Where should we send your money?
-                                        {hasBankDetails && (
-                                            <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">Saved locally</span>
-                                        )}
+                                    <p className="text-sm font-bold text-white mb-2 flex items-center gap-2">
+                                        Payout Destination
+                                        <span className="text-[10px] bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full uppercase tracking-wider font-bold">Verified</span>
                                     </p>
                                     
-                                    <div>
-                                        <label className="block text-xs text-white/60 mb-1">Bank Name</label>
-                                        <Input
-                                            type="text"
-                                            value={bankName}
-                                            onChange={(e) => setBankName(e.target.value)}
-                                            placeholder="e.g. Guarantee Trust Bank"
-                                            className="bg-black/20"
-                                            disabled={hasBankDetails}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-white/60 mb-1">Account Name</label>
-                                        <Input
-                                            type="text"
-                                            value={accountName}
-                                            onChange={(e) => setAccountName(e.target.value)}
-                                            placeholder="e.g. John Doe"
-                                            className="bg-black/20"
-                                            disabled={hasBankDetails}
-                                        />
-                                    </div>
-                                    <div>
-                                        <label className="block text-xs text-white/60 mb-1">Account Number</label>
-                                        <Input
-                                            type="text"
-                                            value={accountNumber}
-                                            onChange={(e) => setAccountNumber(e.target.value)}
-                                            placeholder="e.g. 0123456789"
-                                            className="bg-black/20"
-                                            disabled={hasBankDetails}
-                                        />
-                                    </div>
-                                    
-                                    {hasBankDetails && (
-                                        <p className="text-xs text-white/40 italic pt-1 text-right">
-                                            Update via <Link href="/settings" className="text-primary underline">Settings</Link>
-                                        </p>
+                                    {hasBankDetails ? (
+                                        <div className="bg-black/20 p-3 rounded-lg border border-white/5 space-y-1">
+                                            <p className="text-sm text-white/80"><span className="text-white/40 mr-2">Bank:</span> {bankName}</p>
+                                            <p className="text-sm text-white/80"><span className="text-white/40 mr-2">Name:</span> {accountName}</p>
+                                            <p className="text-sm font-mono text-white/80"><span className="text-white/40 mr-2">Acct:</span> {accountNumber}</p>
+                                        </div>
+                                    ) : (
+                                        <div className="p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-400 text-sm">
+                                            Bank details missing. Please update them in Settings.
+                                        </div>
                                     )}
+                                    
+                                    <p className="text-xs text-white/40 pt-1 text-right">
+                                        Need to change? Contact Support
+                                    </p>
                                 </div>
                             )}
 
@@ -725,7 +719,7 @@ export default function WalletPage() {
                                 <Button
                                     className="flex-1 bg-brand-gradient"
                                     onClick={handleWithdraw}
-                                    disabled={!withdrawAmount || withdrawAmountNum <= 0 || withdrawAmountNum > (wallet?.balance || 0) || withdrawing || (!hasBankDetails && (!bankName || !accountName || !accountNumber))}
+                                    disabled={!isKycVerified || !withdrawAmount || withdrawAmountNum <= 0 || withdrawAmountNum > (wallet?.balance || 0) || withdrawing || !hasBankDetails}
                                 >
                                     {withdrawing ? (
                                         <Loader2 className="w-4 h-4 animate-spin mr-2" />

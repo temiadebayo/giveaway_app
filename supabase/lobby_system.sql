@@ -75,7 +75,7 @@ BEGIN
         number_of_winners, prevent_previous_winners_hours
     )
     VALUES (
-        auth.uid(), p_title, p_description, p_prize_amount, 'USD',
+        auth.uid(), p_title, p_description, p_prize_amount, 'NGN',
         p_game_type, p_duration_seconds, p_min_trust_tier, p_max_participants,
         'scheduled', p_scheduled_start, p_allow_sharing,
         p_number_of_winners, p_prevent_previous_winners_hours

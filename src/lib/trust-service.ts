@@ -89,9 +89,13 @@ class TrustService {
     }
 
     /**
-     * Submit a new KYC Request (Uploads files to storage bucket and creates DB row)
+     * Submit a new KYC Request (Uploads files to storage bucket, creates DB row, and updates bank details)
      */
-    async submitKycRequest(idCardFile: File, selfieFile: File): Promise<{ success: boolean; error?: string }> {
+    async submitKycRequest(
+        idCardFile: File,
+        selfieFile: File,
+        bankDetails: { bank_name: string; account_name: string; account_number: string }
+    ): Promise<{ success: boolean; error?: string }> {
         const { data: { user } } = await this.supabase.auth.getUser();
         if (!user) return { success: false, error: 'User not authenticated' };
 
@@ -131,6 +135,18 @@ class TrustService {
                 });
 
             if (dbError) throw new Error(`Database insertion failed: ${dbError.message}`);
+
+            // 4. Update Profile with Bank Details
+            const { error: profileError } = await this.supabase
+                .from('profiles')
+                .update({
+                    bank_name: bankDetails.bank_name,
+                    account_name: bankDetails.account_name,
+                    account_number: bankDetails.account_number
+                })
+                .eq('id', user.id);
+
+            if (profileError) throw new Error(`Failed to update bank details: ${profileError.message}`);
 
             return { success: true };
         } catch (error: any) {

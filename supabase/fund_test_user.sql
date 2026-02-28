@@ -25,7 +25,7 @@ BEGIN
     IF v_wallet_id IS NULL THEN
         -- Create wallet with $2000
         INSERT INTO public.wallets (user_id, balance, currency)
-        VALUES (v_user_id, 2000, 'USD')
+        VALUES (v_user_id, 2000, 'NGN')
         RETURNING id INTO v_wallet_id;
         
         RAISE NOTICE 'Created wallet for temiadebayo1 with $2000';

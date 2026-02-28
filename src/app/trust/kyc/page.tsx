@@ -15,6 +15,9 @@ export default function KycPage() {
     // File states
     const [idFile, setIdFile] = useState<File | null>(null);
     const [selfieFile, setSelfieFile] = useState<File | null>(null);
+    const [bankName, setBankName] = useState("");
+    const [accountName, setAccountName] = useState("");
+    const [accountNumber, setAccountNumber] = useState("");
     const [isSubmitting, setIsSubmitting] = useState(false);
     const [error, setError] = useState<string | null>(null);
 
@@ -59,10 +62,19 @@ export default function KycPage() {
             return;
         }
 
+        if (!bankName || !accountName || !accountNumber) {
+            setError("Please provide your bank details for future withdrawals.");
+            return;
+        }
+
         setIsSubmitting(true);
         setError(null);
 
-        const result = await trustService.submitKycRequest(idFile, selfieFile);
+        const result = await trustService.submitKycRequest(idFile, selfieFile, {
+            bank_name: bankName,
+            account_name: accountName,
+            account_number: accountNumber
+        });
 
         if (result.success) {
             // Reload status to show Pending state
@@ -210,11 +222,53 @@ export default function KycPage() {
                                     </label>
                                 </div>
 
+                                {/* Bank Details Upload */}
+                                <div className="space-y-4">
+                                    <div>
+                                        <h4 className="font-semibold mb-2">3. Bank Account Details</h4>
+                                        <p className="text-sm text-slate-400 mb-4">Provide the primary bank account where your future withdrawals should be sent to. The name must match your ID.</p>
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-1.5 pl-1">Bank Name</label>
+                                        <input
+                                            type="text"
+                                            value={bankName}
+                                            onChange={(e) => setBankName(e.target.value)}
+                                            placeholder="e.g. Access Bank"
+                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-1.5 pl-1">Account Number</label>
+                                        <input
+                                            type="text"
+                                            value={accountNumber}
+                                            onChange={(e) => setAccountNumber(e.target.value)}
+                                            placeholder="e.g. 0123456789"
+                                            maxLength={15}
+                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                                        />
+                                    </div>
+
+                                    <div>
+                                        <label className="block text-sm font-medium text-slate-400 mb-1.5 pl-1">Account Name</label>
+                                        <input
+                                            type="text"
+                                            value={accountName}
+                                            onChange={(e) => setAccountName(e.target.value)}
+                                            placeholder="As it appears on your ID"
+                                            className="w-full bg-slate-950 border border-slate-800 rounded-xl px-4 py-3 text-white placeholder:text-slate-600 focus:outline-none focus:border-primary focus:ring-1 focus:ring-primary transition-all"
+                                        />
+                                    </div>
+                                </div>
+
                                 {/* Submit Button */}
                                 <div className="pt-4 border-t border-slate-800">
                                     <Button
                                         className="w-full bg-brand-gradient py-6 text-lg font-bold"
-                                        disabled={!idFile || !selfieFile || isSubmitting}
+                                        disabled={!idFile || !selfieFile || !bankName || !accountNumber || !accountName || isSubmitting}
                                         onClick={handleSubmit}
                                     >
                                         {isSubmitting ? (
