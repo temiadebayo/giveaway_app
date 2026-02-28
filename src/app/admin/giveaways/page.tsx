@@ -69,7 +69,7 @@ export default async function AdminGiveawaysPage() {
                                     </div>
                                     <div>
                                         <p className="text-slate-500 text-xs mb-1">Host</p>
-                                        <p className="text-sm font-medium text-white truncate text-ellipsis">
+                                        <p className="text-sm font-medium text-white truncate w-full block">
                                             @{giveaway.profiles?.username || 'Unknown'}
                                         </p>
                                     </div>
@@ -156,7 +156,7 @@ export default async function AdminGiveawaysPage() {
                     <div className="overflow-x-auto">
                         <table className="w-full text-left text-sm">
                             <thead className="bg-slate-800/50 text-slate-400 border-b border-slate-800">
-                                <tr>
+                                <tr className="whitespace-nowrap">
                                     <th className="p-4 font-medium">Title</th>
                                     <th className="p-4 font-medium">Host</th>
                                     <th className="p-4 font-medium">Prize</th>
@@ -173,8 +173,8 @@ export default async function AdminGiveawaysPage() {
                                     </tr>
                                 ) : (
                                     endedGiveaways.map((giveaway: any) => (
-                                        <tr key={giveaway.id} className="hover:bg-slate-800/30 transition-colors">
-                                            <td className="p-4 font-medium text-white">{giveaway.title}</td>
+                                        <tr key={giveaway.id} className="hover:bg-slate-800/30 transition-colors whitespace-nowrap">
+                                            <td className="p-4 font-medium text-white truncate max-w-[200px]">{giveaway.title}</td>
                                             <td className="p-4 text-slate-300">@{giveaway.profiles?.username || 'Unknown'}</td>
                                             <td className="p-4 text-white">{formatNGN(giveaway.prize_amount)}</td>
                                             <td className="p-4">

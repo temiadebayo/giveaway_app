@@ -1,6 +1,7 @@
 import { redirect } from 'next/navigation';
 import { createServerSupabaseClient } from '@/lib/supabase-server';
 import { adminService } from '@/lib/admin-service';
+import { AdminMobileNav } from '@/components/admin/admin-mobile-nav';
 import Link from 'next/link';
 import {
     LayoutDashboard,
@@ -32,9 +33,11 @@ export default async function AdminLayout({
     }
 
     return (
-        <div className="min-h-screen bg-slate-950 text-white flex">
+        <div className="min-h-screen bg-slate-950 text-white flex flex-col md:flex-row">
+            <AdminMobileNav userEmail={user.email || 'Admin'} />
+
             {/* Sidebar */}
-            <aside className="w-64 bg-slate-900 border-r border-slate-800 flex-col fixed inset-y-0 hidden md:flex">
+            <aside className="w-64 bg-slate-900 border-r border-slate-800 flex-col fixed inset-y-0 hidden md:flex z-40">
                 <div className="p-6 border-b border-slate-800 flex items-center gap-3">
                     <ShieldCheck className="w-8 h-8 text-indigo-500" />
                     <div>

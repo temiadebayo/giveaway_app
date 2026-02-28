@@ -11,6 +11,13 @@ ADD COLUMN IF NOT EXISTS allow_sharing BOOLEAN DEFAULT true;
 ALTER TABLE public.giveaways 
 ADD COLUMN IF NOT EXISTS scheduled_start_at TIMESTAMPTZ;
 
+-- 2.5 Add multiple winner support columns
+ALTER TABLE public.giveaways 
+ADD COLUMN IF NOT EXISTS number_of_winners INTEGER DEFAULT 1 CHECK (number_of_winners >= 1);
+
+ALTER TABLE public.giveaways 
+ADD COLUMN IF NOT EXISTS prevent_previous_winners_hours INTEGER DEFAULT 0 CHECK (prevent_previous_winners_hours >= 0);
+
 -- 3. Update RLS on giveaway_participants to allow viewing during 'scheduled' (lobby)
 DROP POLICY IF EXISTS "Users can view participants in their giveaways" ON public.giveaway_participants;
 CREATE POLICY "Users can view participants in their giveaways" ON public.giveaway_participants
@@ -31,7 +38,9 @@ CREATE OR REPLACE FUNCTION public.create_giveaway_with_escrow(
     p_min_trust_tier TEXT DEFAULT 'bronze',
     p_max_participants INTEGER DEFAULT 1000,
     p_scheduled_start TIMESTAMPTZ DEFAULT NULL,
-    p_allow_sharing BOOLEAN DEFAULT true
+    p_allow_sharing BOOLEAN DEFAULT true,
+    p_number_of_winners INTEGER DEFAULT 1,
+    p_prevent_previous_winners_hours INTEGER DEFAULT 0
 )
 RETURNS JSONB AS $$
 DECLARE
@@ -62,12 +71,14 @@ BEGIN
     INSERT INTO public.giveaways (
         host_id, title, description, prize_amount, prize_currency,
         game_type, game_duration_seconds, min_trust_tier, max_participants,
-        status, scheduled_start_at, allow_sharing
+        status, scheduled_start_at, allow_sharing,
+        number_of_winners, prevent_previous_winners_hours
     )
     VALUES (
         auth.uid(), p_title, p_description, p_prize_amount, 'USD',
         p_game_type, p_duration_seconds, p_min_trust_tier, p_max_participants,
-        'scheduled', p_scheduled_start, p_allow_sharing
+        'scheduled', p_scheduled_start, p_allow_sharing,
+        p_number_of_winners, p_prevent_previous_winners_hours
     )
     RETURNING id INTO v_giveaway_id;
     

@@ -224,7 +224,7 @@ export default function GiveawaysPage() {
                             <span className="text-sm text-white/60">Total Prize Pool</span>
                         </div>
                         <p className="text-2xl font-black">
-                            ${giveaways.reduce((sum, g) => sum + g.prize_amount, 0).toLocaleString()}
+                            ₦{giveaways.reduce((sum, g) => sum + g.prize_amount, 0).toLocaleString()}
                         </p>
                     </div>
                 </motion.div>

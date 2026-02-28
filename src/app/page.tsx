@@ -110,7 +110,7 @@ export default function Home() {
             className="grid grid-cols-3 gap-8 max-w-md mx-auto"
           >
             {[
-              { icon: Trophy, label: "Prizes Won", value: "$50K+" },
+              { icon: Trophy, label: "Prizes Won", value: "₦50M+" },
               { icon: Users, label: "Active Players", value: "10K+" },
               { icon: Shield, label: "Fair Games", value: "100%" },
             ].map((stat) => (

@@ -131,7 +131,7 @@ export default function DashboardPage() {
                             </div>
                             <div className="bg-slate-950/50 rounded-xl p-4 text-center border border-slate-800/50">
                                 <TrendingUp className="w-5 h-5 mx-auto mb-1 text-primary" />
-                                <p className="text-2xl font-bold text-white">$0</p>
+                                <p className="text-2xl font-bold text-white">₦0</p>
                                 <p className="text-xs text-slate-400">Earned</p>
                             </div>
                         </div>

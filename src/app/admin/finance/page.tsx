@@ -88,18 +88,18 @@ export default async function AdminFinancePage() {
                         ) : (
                             pendingDeposits.map((tx: any) => (
                                 <div key={tx.id} className="p-6 hover:bg-slate-800/50 transition-colors">
-                                    <div className="flex justify-between items-start mb-3">
-                                        <div>
-                                            <p className="text-xl font-bold text-white mb-1">
+                                    <div className="flex justify-between items-start mb-3 gap-3">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xl font-bold text-white mb-1 truncate">
                                                 {formatNGN(tx.amount)}
                                             </p>
-                                            <p className="text-sm font-medium text-indigo-400 font-mono">
+                                            <p className="text-sm font-medium text-indigo-400 font-mono truncate">
                                                 {tx.metadata?.reference_code || 'NO-REF'}
                                             </p>
                                         </div>
-                                        <div className="text-right">
-                                            <p className="text-white font-medium">@{tx.profiles?.username || 'Unknown'}</p>
-                                            <p className="text-xs text-slate-500">{tx.profiles?.email}</p>
+                                        <div className="text-right flex-shrink-0 max-w-[50%]">
+                                            <p className="text-white font-medium truncate">@{tx.profiles?.username || 'Unknown'}</p>
+                                            <p className="text-xs text-slate-500 truncate">{tx.profiles?.email}</p>
                                             <p className="text-xs text-slate-600 mt-1">{formatDate(tx.created_at)}</p>
                                         </div>
                                     </div>
@@ -152,19 +152,19 @@ export default async function AdminFinancePage() {
                         ) : (
                             pendingWithdrawals.map((w: any) => (
                                 <div key={w.id} className="p-6 hover:bg-slate-800/50 transition-colors">
-                                    <div className="flex justify-between items-start mb-3">
-                                        <div>
-                                            <p className="text-xl font-bold text-white mb-1">
+                                    <div className="flex justify-between items-start mb-3 gap-3">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xl font-bold text-white mb-1 truncate">
                                                 {formatNGN(w.amount)}
                                             </p>
-                                            <div className="space-y-0.5 text-xs">
+                                            <div className="space-y-0.5 text-xs truncate">
                                                 <p className="text-orange-400">Fee: {formatNGN(w.fee)}</p>
                                                 <p className="text-green-400 font-bold">Payout: {formatNGN(w.net_amount)}</p>
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <p className="text-white font-medium">@{w.profiles?.username || 'Unknown'}</p>
-                                            <p className="text-xs text-slate-500">{w.profiles?.email}</p>
+                                        <div className="text-right flex-shrink-0 max-w-[50%]">
+                                            <p className="text-white font-medium truncate">@{w.profiles?.username || 'Unknown'}</p>
+                                            <p className="text-xs text-slate-500 truncate">{w.profiles?.email}</p>
                                             <p className="text-xs text-slate-600 mt-1">{formatDate(w.created_at)}</p>
                                         </div>
                                     </div>
@@ -244,19 +244,19 @@ export default async function AdminFinancePage() {
                         ) : (
                             processingWithdrawals.map((w: any) => (
                                 <div key={w.id} className="p-6 hover:bg-slate-800/50 transition-colors">
-                                    <div className="flex justify-between items-start mb-3">
-                                        <div>
-                                            <p className="text-xl font-bold text-white mb-1">
+                                    <div className="flex justify-between items-start mb-3 gap-3">
+                                        <div className="flex-1 min-w-0">
+                                            <p className="text-xl font-bold text-white mb-1 truncate">
                                                 {formatNGN(w.amount)}
                                             </p>
-                                            <div className="space-y-0.5 text-xs">
+                                            <div className="space-y-0.5 text-xs truncate">
                                                 <p className="text-orange-400">Fee: {formatNGN(w.fee)}</p>
                                                 <p className="text-green-400 font-bold">Payout: {formatNGN(w.net_amount)}</p>
                                             </div>
                                         </div>
-                                        <div className="text-right">
-                                            <p className="text-white font-medium">@{w.profiles?.username || 'Unknown'}</p>
-                                            <p className="text-xs text-slate-500">{w.profiles?.email}</p>
+                                        <div className="text-right flex-shrink-0 max-w-[50%]">
+                                            <p className="text-white font-medium truncate">@{w.profiles?.username || 'Unknown'}</p>
+                                            <p className="text-xs text-slate-500 truncate">{w.profiles?.email}</p>
                                             <p className="text-xs text-slate-600 mt-1">{formatDate(w.created_at)}</p>
                                         </div>
                                     </div>

@@ -599,9 +599,9 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                     Back to Giveaways
                 </Link>
 
-                <div className="grid lg:grid-cols-3 gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                     {/* Main Content */}
-                    <div className="lg:col-span-2 space-y-6">
+                    <div className="lg:col-span-2 space-y-6 min-w-0 flex flex-col">
                         {/* Header */}
                         <motion.div
                             initial={{ opacity: 0, y: -20 }}
@@ -845,7 +845,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                                                     (p.user?.username?.[0] || '?').toUpperCase()
                                                                 )}
                                                             </div>
-                                                            <span className="text-sm font-medium">
+                                                            <span className="text-sm font-medium flex-1 min-w-0 truncate">
                                                                 {p.user?.display_name || p.user?.username || 'Player'}
                                                             </span>
                                                         </motion.div>
@@ -1004,11 +1004,13 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                                                             (p.user?.username?.[0] || '?').toUpperCase()
                                                                         )}
                                                                     </div>
-                                                                    <span className="text-sm font-medium">
-                                                                        {p.user?.display_name || p.user?.username || 'Player'}
-                                                                        {p.user_id === currentUserId && (
-                                                                            <span className="text-xs text-primary ml-1">(you)</span>
-                                                                        )}
+                                                                    <span className="text-sm font-medium flex-1 min-w-0">
+                                                                        <span className="truncate block">
+                                                                            {p.user?.display_name || p.user?.username || 'Player'}
+                                                                            {p.user_id === currentUserId && (
+                                                                                <span className="text-xs text-primary ml-1">(you)</span>
+                                                                            )}
+                                                                        </span>
                                                                     </span>
                                                                 </motion.div>
                                                             ))}
@@ -1320,7 +1322,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                 <div className="flex items-center gap-3">
                                     <Crown className="w-5 h-5 text-yellow-400" />
                                     <span className="text-white/60">Hosted by</span>
-                                    <span className="font-bold">
+                                    <span className="font-bold flex-1 min-w-0 truncate">
                                         {giveaway.host.display_name || giveaway.host.username}
                                     </span>
                                 </div>

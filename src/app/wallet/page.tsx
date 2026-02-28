@@ -46,19 +46,31 @@ export default function WalletPage() {
     const [depositError, setDepositError] = useState<string | null>(null);
     const [username, setUsername] = useState<string>("");
 
+    // Bank Details State
+    const [bankName, setBankName] = useState("");
+    const [accountName, setAccountName] = useState("");
+    const [accountNumber, setAccountNumber] = useState("");
+    const [hasBankDetails, setHasBankDetails] = useState(false);
+
     const loadWalletData = async () => {
         setLoading(true);
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
 
-        // Fetch username
+        // Fetch username & bank details
         if (user) {
             const { data: profile } = await supabase
                 .from('profiles')
-                .select('username')
+                .select('username, bank_name, account_name, account_number')
                 .eq('id', user.id)
                 .single();
             if (profile?.username) setUsername(profile.username);
+            if (profile?.bank_name && profile?.account_name && profile?.account_number) {
+                setBankName(profile.bank_name);
+                setAccountName(profile.account_name);
+                setAccountNumber(profile.account_number);
+                setHasBankDetails(true);
+            }
         }
 
         const walletData = await walletService.getWallet();
@@ -87,10 +99,35 @@ export default function WalletPage() {
             return;
         }
 
+        if (!hasBankDetails && (!bankName || !accountName || !accountNumber)) {
+            setWithdrawError("Please provide your bank details");
+            return;
+        }
+
         setWithdrawing(true);
         setWithdrawError(null);
 
-        const result = await walletService.requestWithdrawal(amount);
+        // Define payout details payload
+        const payoutDetails = {
+            bank_name: bankName,
+            account_name: accountName,
+            account_number: accountNumber
+        };
+
+        // If user didn't have bank details, update their profile too
+        if (!hasBankDetails) {
+            const supabase = createClient();
+            const { data: { user } } = await supabase.auth.getUser();
+            if (user) {
+                await supabase
+                    .from('profiles')
+                    .update(payoutDetails)
+                    .eq('id', user.id);
+                setHasBankDetails(true);
+            }
+        }
+
+        const result = await walletService.requestWithdrawal(amount, payoutDetails);
 
         if (result.success) {
             setWithdrawSuccess(true);
@@ -598,8 +635,60 @@ export default function WalletPage() {
                             {/* Error */}
                             {withdrawError && (
                                 <div className="flex items-center gap-2 p-3 rounded-xl bg-red-500/10 border border-red-500/20 mb-4">
-                                    <AlertCircle className="w-4 h-4 text-red-400" />
+                                    <AlertCircle className="w-4 h-4 text-red-400 flex-shrink-0" />
                                     <p className="text-sm text-red-400">{withdrawError}</p>
+                                </div>
+                            )}
+
+                            {/* Bank Details Collection */}
+                            {withdrawAmountNum > 0 && withdrawAmountNum <= (wallet?.balance || 0) && (
+                                <div className="p-4 rounded-xl bg-white/5 border border-white/10 mb-6 space-y-3">
+                                    <p className="text-sm font-bold text-white mb-2 flex items-center justify-between">
+                                        Where should we send your money?
+                                        {hasBankDetails && (
+                                            <span className="text-xs bg-green-500/20 text-green-400 px-2 py-0.5 rounded-full">Saved locally</span>
+                                        )}
+                                    </p>
+                                    
+                                    <div>
+                                        <label className="block text-xs text-white/60 mb-1">Bank Name</label>
+                                        <Input
+                                            type="text"
+                                            value={bankName}
+                                            onChange={(e) => setBankName(e.target.value)}
+                                            placeholder="e.g. Guarantee Trust Bank"
+                                            className="bg-black/20"
+                                            disabled={hasBankDetails}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs text-white/60 mb-1">Account Name</label>
+                                        <Input
+                                            type="text"
+                                            value={accountName}
+                                            onChange={(e) => setAccountName(e.target.value)}
+                                            placeholder="e.g. John Doe"
+                                            className="bg-black/20"
+                                            disabled={hasBankDetails}
+                                        />
+                                    </div>
+                                    <div>
+                                        <label className="block text-xs text-white/60 mb-1">Account Number</label>
+                                        <Input
+                                            type="text"
+                                            value={accountNumber}
+                                            onChange={(e) => setAccountNumber(e.target.value)}
+                                            placeholder="e.g. 0123456789"
+                                            className="bg-black/20"
+                                            disabled={hasBankDetails}
+                                        />
+                                    </div>
+                                    
+                                    {hasBankDetails && (
+                                        <p className="text-xs text-white/40 italic pt-1 text-right">
+                                            Update via <Link href="/settings" className="text-primary underline">Settings</Link>
+                                        </p>
+                                    )}
                                 </div>
                             )}
 
@@ -615,14 +704,14 @@ export default function WalletPage() {
                                 <Button
                                     className="flex-1 bg-brand-gradient"
                                     onClick={handleWithdraw}
-                                    disabled={withdrawing || !withdrawAmount || parseFloat(withdrawAmount) <= 0}
+                                    disabled={!withdrawAmount || withdrawAmountNum <= 0 || withdrawAmountNum > (wallet?.balance || 0) || withdrawing || (!hasBankDetails && (!bankName || !accountName || !accountNumber))}
                                 >
                                     {withdrawing ? (
                                         <Loader2 className="w-4 h-4 animate-spin mr-2" />
                                     ) : (
                                         <ArrowUpRight className="w-4 h-4 mr-2" />
                                     )}
-                                    Withdraw
+                                    Withdraw Now
                                 </Button>
                             </div>
                         </motion.div>

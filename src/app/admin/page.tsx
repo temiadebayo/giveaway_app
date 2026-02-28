@@ -34,12 +34,12 @@ export default async function AdminDashboard() {
                 />
                 <StatCard
                     label="Total Deposited"
-                    value={`$${stats.totalDeposited.toLocaleString()}`}
+                    value={`₦${stats.totalDeposited.toLocaleString()}`}
                     icon={<TrendingUp className="w-6 h-6 text-green-400" />}
                 />
                 <StatCard
                     label="Total Withdrawn"
-                    value={`$${stats.totalWithdrawn.toLocaleString()}`}
+                    value={`₦${stats.totalWithdrawn.toLocaleString()}`}
                     icon={<DollarSign className="w-6 h-6 text-orange-400" />}
                 />
             </div>

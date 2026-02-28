@@ -287,9 +287,9 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                     Back to Giveaways
                 </Link>
 
-                <div className="grid lg:grid-cols-3 gap-4 sm:gap-6">
+                <div className="grid grid-cols-1 lg:grid-cols-3 gap-4 sm:gap-6">
                     {/* Main Content */}
-                    <div className="lg:col-span-2 space-y-4 sm:space-y-6">
+                    <div className="lg:col-span-2 space-y-4 sm:space-y-6 min-w-0 flex flex-col">
                         {/* Header Stats */}
                         <motion.div
                             initial={{ opacity: 0, y: -20 }}
@@ -354,6 +354,23 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                                         </p>
                                     </div>
                                 )}
+
+                                {/* Mobile Share Quick Action */}
+                                <div className="lg:hidden mb-6 mt-2 max-w-sm mx-auto">
+                                    <div className="flex gap-2 bg-black/40 p-1.5 rounded-xl border border-white/5 shadow-inner">
+                                        <div className="flex-1 min-w-0 px-3 py-2 rounded-lg text-white/80 text-sm truncate bg-transparent flex items-center">
+                                            {giveawayService.getShareUrl(id)}
+                                        </div>
+                                        <Button
+                                            onClick={handleCopyLink}
+                                            variant="secondary"
+                                            className="shrink-0 font-bold px-4"
+                                        >
+                                            {copied ? <Check className="w-4 h-4 text-green-400 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
+                                            {copied ? 'Copied' : 'Copy'}
+                                        </Button>
+                                    </div>
+                                </div>
 
                                 <Button
                                     onClick={handleStartEvent}
@@ -476,10 +493,10 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                                                 </div>
 
                                                 {/* Info */}
-                                                <div className="text-left">
-                                                    <p className="font-medium flex items-center gap-2">
-                                                        {participant.user?.display_name || participant.user?.username || 'Player'}
-                                                        {participant.is_winner && <Award className="w-4 h-4 text-yellow-400" />}
+                                                <div className="text-left flex-1 min-w-0">
+                                                    <p className="font-medium flex items-center gap-2 truncate">
+                                                        <span className="truncate">{participant.user?.display_name || participant.user?.username || 'Player'}</span>
+                                                        {participant.is_winner && <Award className="w-4 h-4 text-yellow-400 shrink-0" />}
                                                     </p>
                                                     <p className="text-xs text-white/40">
                                                         {isLobby ? (
@@ -531,7 +548,7 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                     </div>
 
                     {/* Sidebar */}
-                    <div className="space-y-6">
+                    <div className="space-y-4 sm:space-y-6 min-w-0">
                         {/* Giveaway Info */}
                         <motion.div
                             initial={{ opacity: 0, x: 20 }}
@@ -585,7 +602,7 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                                 Event Link
                             </h3>
                             <div className="flex gap-2">
-                                <div className="flex-1 px-3 py-2 rounded-lg bg-white/5 text-white/60 text-sm truncate">
+                                <div className="flex-1 min-w-0 px-3 py-2 rounded-lg bg-white/5 text-white/60 text-sm truncate">
                                     {giveawayService.getShareUrl(id)}
                                 </div>
                                 <Button

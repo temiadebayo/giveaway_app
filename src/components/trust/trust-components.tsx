@@ -172,7 +172,7 @@ export function TierBenefitsCard({ tier }: TierBenefitsCardProps) {
         {
             icon: DollarSign,
             label: "Withdrawal Limit",
-            value: `$${benefits.withdrawalLimit.toLocaleString()}/day`
+            value: `₦${benefits.withdrawalLimit.toLocaleString()}/day`
         },
         {
             icon: Clock,
@@ -189,7 +189,7 @@ export function TierBenefitsCard({ tier }: TierBenefitsCardProps) {
         {
             icon: Zap,
             label: "Max Entry",
-            value: `$${benefits.maxEventValue.toLocaleString()}`
+            value: `₦${benefits.maxEventValue.toLocaleString()}`
         },
     ];
 

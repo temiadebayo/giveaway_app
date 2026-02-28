@@ -32,8 +32,8 @@ export default async function AdminUsersPage({
                 </form>
             </div>
 
-            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden">
-                <table className="w-full text-left">
+            <div className="bg-slate-900 border border-slate-800 rounded-2xl overflow-x-auto">
+                <table className="w-full text-left min-w-[800px]">
                     <thead className="bg-slate-950 text-slate-400 text-sm font-medium">
                         <tr>
                             <th className="p-4 pl-6">User</th>
@@ -58,13 +58,13 @@ export default async function AdminUsersPage({
                                     </div>
                                 </td>
                                 <td className="p-4 font-mono font-medium text-white">
-                                    ${(user.wallets?.balance || 0).toLocaleString()}
+                                    ₦{(user.wallets?.balance || 0).toLocaleString()}
                                 </td>
                                 <td className="p-4 text-green-400 font-mono text-sm">
-                                    +${(user.wallets?.total_earned || 0).toLocaleString()}
+                                    +₦{(user.wallets?.total_earned || 0).toLocaleString()}
                                 </td>
                                 <td className="p-4 text-slate-400 font-mono text-sm">
-                                    ${(user.wallets?.total_deposited || 0).toLocaleString()}
+                                    ₦{(user.wallets?.total_deposited || 0).toLocaleString()}
                                 </td>
                                 <td className="p-4 text-slate-500 text-sm">
                                     {new Date(user.created_at).toLocaleDateString()}
