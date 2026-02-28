@@ -18,6 +18,7 @@ import { TIER_BENEFITS, TrustTier } from "@/lib/trust-engine";
 import { useFingerprint } from "@/hooks/use-fingerprint";
 import { AppHeader } from "@/components/app-header";
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import ZackMascot from "@/assets/Zack_GA_Mascot_1.svg";
 import confetti from 'canvas-confetti';
 import {
     ArrowLeft,
@@ -684,9 +685,9 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                                 initial={{ scale: 0 }}
                                                 animate={{ scale: 1 }}
                                                 transition={{ type: "spring", delay: 0.2 }}
-                                                className="w-24 h-24 mx-auto mb-6 rounded-full bg-gradient-to-r from-yellow-400 to-orange-500 flex items-center justify-center glow-primary"
+                                                className="w-28 h-28 mx-auto mb-4"
                                             >
-                                                <Trophy className="w-12 h-12 text-white" />
+                                                <Image src={ZackMascot} alt="Zack celebrates!" width={112} height={112} className="drop-shadow-[0_0_15px_rgba(255,215,0,0.4)]" />
                                             </motion.div>
                                             <h2 className="text-2xl sm:text-3xl font-black mb-2">YOU WON! 🎉</h2>
                                             <p className="text-3xl sm:text-5xl font-black text-gradient-primary mb-4">

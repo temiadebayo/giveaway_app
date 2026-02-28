@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { TrustTier, TIER_BENEFITS, TrustScoreBreakdown } from "@/lib/trust-engine";
-import { Shield, Zap, Clock, DollarSign, Crown, TrendingUp, Check } from "lucide-react";
+import { Shield, Zap, Clock, Banknote, Crown, TrendingUp, Check } from "lucide-react";
 
 interface TrustTierBadgeProps {
     tier: TrustTier;
@@ -170,7 +170,7 @@ export function TierBenefitsCard({ tier }: TierBenefitsCardProps) {
 
     const benefitItems = [
         {
-            icon: DollarSign,
+            icon: Banknote,
             label: "Withdrawal Limit",
             value: `₦${benefits.withdrawalLimit.toLocaleString()}/day`
         },

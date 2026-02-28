@@ -209,6 +209,9 @@ export const adminService = {
             .rpc('approve_withdrawal', { p_withdrawal_id: withdrawalId });
 
         if (error) throw error;
+        if (data && typeof data === 'object' && data.success === false) {
+            throw new Error(data.error || 'Failed to approve withdrawal');
+        }
         return data;
     },
 
@@ -220,6 +223,9 @@ export const adminService = {
             .rpc('reject_withdrawal', { p_withdrawal_id: withdrawalId });
 
         if (error) throw error;
+        if (data && typeof data === 'object' && data.success === false) {
+            throw new Error(data.error || 'Failed to reject withdrawal');
+        }
         return data;
     }
 

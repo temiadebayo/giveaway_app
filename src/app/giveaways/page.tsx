@@ -8,6 +8,7 @@ import { giveawayService, Giveaway } from "@/lib/giveaway-service";
 import { GiveawayCard } from "@/components/giveaway/giveaway-components";
 import { AppHeader } from "@/components/app-header";
 import { Breadcrumbs } from "@/components/breadcrumbs";
+import { ProfileCompletionBanner } from "@/components/profile-completion-banner";
 import {
     Gamepad2,
     Plus,
@@ -76,7 +77,7 @@ export default function GiveawaysPage() {
     };
 
     const formatPrize = (amount: number, currency: string) => {
-        return new Intl.NumberFormat('en-US', {
+        return new Intl.NumberFormat('en-NG', {
             style: 'currency',
             currency: currency,
             minimumFractionDigits: 0,
@@ -126,6 +127,11 @@ export default function GiveawaysPage() {
                     </h1>
                     <p className="text-white/60">Join live giveaways and win real prizes!</p>
                 </motion.div>
+
+                {/* Profile Completion Reminder */}
+                <div className="mb-6">
+                    <ProfileCompletionBanner />
+                </div>
 
                 {/* My Giveaways Section */}
                 {myGiveaways.length > 0 && (

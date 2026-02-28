@@ -30,7 +30,7 @@ import {
     Share2
 } from "lucide-react";
 
-// Preset tiers (in dollars)
+// Preset tiers (in naira)
 const PRESET_TIERS = [
     {
         amount: 50000,

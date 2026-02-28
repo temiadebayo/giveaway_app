@@ -33,6 +33,7 @@ import {
     Link as LinkIcon
 } from "lucide-react";
 import logoWhite from "@/assets/logo_white.png";
+import { LobbyJoinToast } from "@/components/giveaway/lobby-join-toast";
 
 interface HostPageProps {
     params: Promise<{ id: string }>;
@@ -363,7 +364,7 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                                         </div>
                                         <Button
                                             onClick={handleCopyLink}
-                                            variant="secondary"
+                                            variant="outline"
                                             className="shrink-0 font-bold px-4"
                                         >
                                             {copied ? <Check className="w-4 h-4 text-green-400 mr-2" /> : <Copy className="w-4 h-4 mr-2" />}
@@ -771,6 +772,15 @@ export default function HostSpectatorPage({ params }: HostPageProps) {
                     </motion.div>
                 )}
             </AnimatePresence>
+
+            {/* Lobby Join Toast Notifications */}
+            <LobbyJoinToast
+                giveawayId={id}
+                participants={participants.map(p => ({
+                    user: { username: p.username, display_name: p.display_name },
+                    joined_at: p.joined_at
+                }))}
+            />
         </main>
     );
 }

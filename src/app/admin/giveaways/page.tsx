@@ -1,5 +1,5 @@
 import { adminService } from '@/lib/admin-service';
-import { Gift, Calendar, DollarSign, Users, StopCircle, RefreshCw, Clock } from 'lucide-react';
+import { Gift, Calendar, Banknote, Users, StopCircle, RefreshCw, Clock } from 'lucide-react';
 import { revalidatePath } from 'next/cache';
 
 export default async function AdminGiveawaysPage() {
@@ -63,7 +63,7 @@ export default async function AdminGiveawaysPage() {
                                     <div>
                                         <p className="text-slate-500 text-xs mb-1">Prize Pool</p>
                                         <p className="text-lg font-bold text-primary flex items-center gap-1">
-                                            <DollarSign className="w-4 h-4" />
+                                            <Banknote className="w-4 h-4" />
                                             {formatNGN(giveaway.prize_amount)}
                                         </p>
                                     </div>

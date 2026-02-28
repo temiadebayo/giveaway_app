@@ -8,7 +8,7 @@ import {
     Trophy,
     Users,
     Clock,
-    DollarSign,
+    Banknote,
     ChevronRight,
     Gamepad2,
     Crown,
@@ -27,7 +27,7 @@ export function GiveawayCard({ giveaway, index = 0 }: GiveawayCardProps) {
     const isEnded = giveaway.status === 'ended';
 
     const formatPrize = (amount: number, currency: string) => {
-        return new Intl.NumberFormat('en-US', {
+        return new Intl.NumberFormat('en-NG', {
             style: 'currency',
             currency: currency,
             minimumFractionDigits: 0,
@@ -121,9 +121,9 @@ export function GiveawayCard({ giveaway, index = 0 }: GiveawayCardProps) {
                 {/* Entry Fee */}
                 {giveaway.entry_fee > 0 && (
                     <div className="flex items-center gap-2 mb-4 p-2 rounded-lg bg-yellow-500/10 border border-yellow-500/20">
-                        <DollarSign className="w-4 h-4 text-yellow-400" />
+                        <Banknote className="w-4 h-4 text-yellow-400" />
                         <span className="text-sm">
-                            Entry: <span className="font-bold text-yellow-400">${giveaway.entry_fee}</span>
+                            Entry: <span className="font-bold text-yellow-400">₦{giveaway.entry_fee.toLocaleString()}</span>
                         </span>
                     </div>
                 )}
@@ -274,7 +274,7 @@ interface WinnerCelebrationProps {
 
 export function WinnerCelebration({ winner, prize, isCurrentUser }: WinnerCelebrationProps) {
     const formatPrize = (amount: number, currency: string) => {
-        return new Intl.NumberFormat('en-US', {
+        return new Intl.NumberFormat('en-NG', {
             style: 'currency',
             currency: currency,
             minimumFractionDigits: 0,

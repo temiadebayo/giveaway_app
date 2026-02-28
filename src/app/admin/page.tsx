@@ -1,6 +1,8 @@
 import { adminService } from '@/lib/admin-service';
-import { Users, Gift, TrendingUp, DollarSign } from 'lucide-react';
+import { Users, Gift, TrendingUp, Banknote, Activity, Database, Radio, CreditCard } from 'lucide-react';
 import { AdminQuickStats } from './components/AdminQuickStats';
+import { HealthItem } from '@/components/admin/admin-health-item';
+import { AdminLiveFeed } from '@/components/admin/admin-live-feed';
 
 export default async function AdminDashboard() {
     const stats = await adminService.getStats();
@@ -12,46 +14,67 @@ export default async function AdminDashboard() {
     ]);
 
     return (
-        <div className="space-y-8">
+        <div className="space-y-6">
+            {/* Header */}
             <div>
-                <h1 className="text-3xl font-bold mb-2">Dashboard Overview</h1>
-                <p className="text-slate-400">Welcome back, Admin. Here&apos;s what&apos;s happening.</p>
+                <h1 className="text-2xl md:text-3xl font-black text-white mb-1">Dashboard</h1>
+                <p className="text-sm text-slate-500">Overview of your platform&apos;s key metrics</p>
             </div>
 
             {/* Stats Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 md:gap-4">
                 <StatCard
                     label="Total Users"
-                    value={stats.userCount}
-                    icon={<Users className="w-6 h-6 text-blue-400" />}
-                    trend="+12% this week"
+                    value={stats.userCount.toLocaleString()}
+                    icon={<Users className="w-5 h-5" />}
+                    iconColor="text-blue-400"
+                    iconBg="bg-blue-500/10"
+                    borderAccent="border-l-blue-500"
                 />
                 <StatCard
                     label="Active Giveaways"
-                    value={stats.activeGiveawayCount}
+                    value={stats.activeGiveawayCount.toLocaleString()}
                     subValue={`of ${stats.giveawayCount} total`}
-                    icon={<Gift className="w-6 h-6 text-purple-400" />}
+                    icon={<Gift className="w-5 h-5" />}
+                    iconColor="text-purple-400"
+                    iconBg="bg-purple-500/10"
+                    borderAccent="border-l-purple-500"
                 />
                 <StatCard
                     label="Total Deposited"
                     value={`₦${stats.totalDeposited.toLocaleString()}`}
-                    icon={<TrendingUp className="w-6 h-6 text-green-400" />}
+                    icon={<TrendingUp className="w-5 h-5" />}
+                    iconColor="text-green-400"
+                    iconBg="bg-green-500/10"
+                    borderAccent="border-l-green-500"
                 />
                 <StatCard
                     label="Total Withdrawn"
                     value={`₦${stats.totalWithdrawn.toLocaleString()}`}
-                    icon={<DollarSign className="w-6 h-6 text-orange-400" />}
+                    icon={<Banknote className="w-5 h-5" />}
+                    iconColor="text-orange-400"
+                    iconBg="bg-orange-500/10"
+                    borderAccent="border-l-orange-500"
                 />
             </div>
 
-            {/* Recent Activity Section could go here */}
-            <div className="grid lg:grid-cols-2 gap-8">
-                <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800 h-fit">
-                    <h2 className="text-xl font-bold mb-4">System Health</h2>
+            {/* Main Grid */}
+            <div className="grid lg:grid-cols-3 gap-4 md:gap-6">
+                {/* Live Feed */}
+                <div className="col-span-1 h-[320px]">
+                    <AdminLiveFeed />
+                </div>
+
+                {/* System Health */}
+                <div className="p-5 rounded-2xl bg-slate-900/80 border border-slate-800/60 backdrop-blur-sm h-[320px]">
+                    <div className="flex items-center gap-2 mb-4">
+                        <Activity className="w-4 h-4 text-green-400" />
+                        <h2 className="text-base font-bold text-white">System Health</h2>
+                    </div>
                     <div className="space-y-4">
-                        <HealthItem label="Database" status="Healthy" color="bg-green-500" />
-                        <HealthItem label="Realtime Connections" status="Active" color="bg-green-500" />
-                        <HealthItem label="Payments" status="Manual Mode" color="bg-yellow-500" />
+                        <HealthItem label="Database" status="Healthy" color="bg-green-500" icon={<Database className="w-4 h-4 text-slate-500" />} />
+                        <HealthItem label="Realtime" status="Active" color="bg-green-500" icon={<Radio className="w-4 h-4 text-slate-500" />} />
+                        <HealthItem label="Payments" status="Manual Mode" color="bg-yellow-500" icon={<CreditCard className="w-4 h-4 text-slate-500" />} />
                     </div>
                 </div>
 
@@ -67,30 +90,25 @@ export default async function AdminDashboard() {
     );
 }
 
-function StatCard({ label, value, subValue, icon, trend }: any) {
+function StatCard({ label, value, subValue, icon, iconColor, iconBg, borderAccent }: {
+    label: string;
+    value: string | number;
+    subValue?: string;
+    icon: React.ReactElement;
+    iconColor: string;
+    iconBg: string;
+    borderAccent: string;
+}) {
     return (
-        <div className="p-6 rounded-2xl bg-slate-900 border border-slate-800">
-            <div className="flex justify-between items-start mb-4">
-                <div className="p-3 rounded-lg bg-slate-800">
-                    {icon}
+        <div className={`p-4 md:p-5 rounded-xl bg-slate-900/80 border border-slate-800/60 border-l-2 ${borderAccent} backdrop-blur-sm`}>
+            <div className="flex items-center justify-between mb-3">
+                <div className={`p-2 rounded-lg ${iconBg}`}>
+                    <span className={iconColor}>{icon}</span>
                 </div>
-                {trend && <span className="text-xs font-medium text-green-400 bg-green-400/10 px-2 py-1 rounded-full">{trend}</span>}
             </div>
-            <h3 className="text-3xl font-black text-white mb-1">{value}</h3>
-            <p className="text-sm text-slate-400 font-medium">{label}</p>
-            {subValue && <p className="text-xs text-slate-500 mt-1">{subValue}</p>}
-        </div>
-    );
-}
-
-function HealthItem({ label, status, color }: any) {
-    return (
-        <div className="flex items-center justify-between p-3 rounded-lg bg-slate-800/50">
-            <span className="font-medium text-slate-300">{label}</span>
-            <div className="flex items-center gap-2">
-                <div className={`w-2 h-2 rounded-full ${color}`} />
-                <span className="text-sm font-medium text-white">{status}</span>
-            </div>
+            <h3 className="text-xl md:text-2xl font-black text-white mb-0.5 truncate">{value}</h3>
+            <p className="text-xs text-slate-500 font-medium">{label}</p>
+            {subValue && <p className="text-[10px] text-slate-600 mt-0.5">{subValue}</p>}
         </div>
     );
 }

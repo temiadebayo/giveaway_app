@@ -3,12 +3,16 @@
 import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import Link from "next/link";
+import Image from "next/image";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { AppHeader } from "@/components/app-header";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import { walletService, Wallet, WalletTransaction, WithdrawalRequest, FEES, BANK_DETAILS } from "@/lib/wallet-service";
+import { ProfileCompletionBanner } from "@/components/profile-completion-banner";
 import { createClient } from "@/lib/supabase";
+import NatMascot from "@/assets/Nat_GA_Mascot.svg";
+import { BalanceChart } from "@/components/wallet/balance-chart";
 import {
     Wallet as WalletIcon,
     ArrowUpRight,
@@ -238,6 +242,11 @@ export default function WalletPage() {
                     <p className="text-white/60">Manage your funds and withdrawals</p>
                 </motion.div>
 
+                {/* Profile Completion Reminder */}
+                <div className="mb-6">
+                    <ProfileCompletionBanner />
+                </div>
+
                 {/* Balance Cards */}
                 <motion.div
                     initial={{ opacity: 0, y: 20 }}
@@ -297,6 +306,18 @@ export default function WalletPage() {
                     </div>
                 </motion.div>
 
+                {/* Balance History Chart */}
+                {transactions.length >= 2 && (
+                    <motion.div
+                        initial={{ opacity: 0, y: 20 }}
+                        animate={{ opacity: 1, y: 0 }}
+                        transition={{ delay: 0.2 }}
+                        className="mb-8"
+                    >
+                        <BalanceChart transactions={transactions} />
+                    </motion.div>
+                )}
+
                 {/* Active Withdrawals */}
                 {withdrawals.filter(w => ['pending', 'processing'].includes(w.status)).length > 0 && (
                     <motion.div
@@ -355,7 +376,7 @@ export default function WalletPage() {
 
                     {transactions.length === 0 ? (
                         <div className="card-premium p-8 text-center">
-                            <WalletIcon className="w-12 h-12 mx-auto mb-3 text-white/20" />
+                            <Image src={NatMascot} alt="Nat" width={80} height={80} className="mx-auto mb-3 drop-shadow-md" />
                             <p className="text-white/40">No transactions yet</p>
                             <p className="text-sm text-white/20">Win a giveaway or deposit funds to get started!</p>
                         </div>

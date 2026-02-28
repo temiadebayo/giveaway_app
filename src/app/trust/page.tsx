@@ -12,6 +12,7 @@ import {
     TierBenefitsCard,
     ImprovementTips
 } from "@/components/trust/trust-components";
+import { TrustScoreDial } from "@/components/trust/trust-score-dial";
 import {
     ArrowLeft,
     RefreshCw,
@@ -116,6 +117,12 @@ export default function TrustScorePage() {
                     transition={{ delay: 0.1 }}
                     className="card-premium p-6 mb-6"
                 >
+                    {/* Radial Dial */}
+                    <div className="flex justify-center mb-4">
+                        <TrustScoreDial score={breakdown.total} tier={breakdown.tier} />
+                    </div>
+
+                    {/* Linear Bar (detail view) */}
                     <TrustScoreBar score={breakdown.total} animated />
 
                     {nextTier?.nextTier && (

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { AppHeader } from "@/components/app-header";
@@ -20,6 +21,9 @@ import {
     Sparkles
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
+import { ProfileCompletionBanner } from "@/components/profile-completion-banner";
+import FredMascot from "@/assets/Fred_GA_Mascot.svg";
+import NatMascot from "@/assets/Nat_GA_Mascot.svg";
 
 export default function DashboardPage() {
     const { signOut, getUser, loading } = useAuth();
@@ -47,12 +51,32 @@ export default function DashboardPage() {
                     initial={{ opacity: 0, y: -10 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ duration: 0.3 }}
-                    className="mb-8"
+                    className="mb-8 flex items-center justify-between"
                 >
-                    <h1 className="text-3xl md:text-4xl font-black text-white mb-2">
-                        Welcome back<span className="text-primary">!</span>
-                    </h1>
-                    <p className="text-slate-400">Ready to compete? Let&apos;s get those W&apos;s 🔥</p>
+                    <div>
+                        <h1 className="text-3xl md:text-4xl font-black text-white mb-2">
+                            Welcome back<span className="text-primary">!</span>
+                        </h1>
+                        <p className="text-slate-400">Ready to compete? Let&apos;s get those W&apos;s 🔥</p>
+                    </div>
+                    <motion.div
+                        initial={{ opacity: 0, scale: 0.8, rotate: -5 }}
+                        animate={{ opacity: 1, scale: 1, rotate: 0 }}
+                        transition={{ delay: 0.2, type: "spring", bounce: 0.4 }}
+                        className="hidden sm:block"
+                    >
+                        <Image src={FredMascot} alt="Fred" width={80} height={80} className="drop-shadow-lg" />
+                    </motion.div>
+                </motion.div>
+
+                {/* Profile Completion Reminder */}
+                <motion.div
+                    initial={{ opacity: 0, y: 10 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: 0.05, duration: 0.3 }}
+                    className="mb-6"
+                >
+                    <ProfileCompletionBanner />
                 </motion.div>
 
                 {/* Featured Host Giveaway CTA */}
@@ -241,11 +265,16 @@ export default function DashboardPage() {
                             </div>
 
                             <div className="text-center py-10 bg-slate-950/50 rounded-xl border border-slate-800/50">
-                                <div className="w-16 h-16 mx-auto mb-4 rounded-2xl bg-slate-800 flex items-center justify-center">
-                                    <Star className="w-8 h-8 text-slate-500" />
-                                </div>
-                                <p className="text-slate-300 font-medium mb-1">No active giveaways</p>
-                                <p className="text-sm text-slate-500">Check back soon for new contests!</p>
+                                <motion.div
+                                    initial={{ opacity: 0, y: 10 }}
+                                    animate={{ opacity: 1, y: 0 }}
+                                    transition={{ delay: 0.3 }}
+                                    className="flex flex-col items-center"
+                                >
+                                    <Image src={NatMascot} alt="Nat" width={100} height={100} className="mb-3 drop-shadow-md" />
+                                    <p className="text-slate-300 font-medium mb-1">No active giveaways</p>
+                                    <p className="text-sm text-slate-500">Check back soon or host your own!</p>
+                                </motion.div>
                             </div>
                         </div>
                     </motion.div>
