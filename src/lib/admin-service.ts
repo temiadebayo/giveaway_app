@@ -159,10 +159,43 @@ export const adminService = {
             .from('withdrawal_requests')
             .select(`
                 *,
-                profiles ( email, username )
+                profiles ( email, username, bank_name, account_name, account_number )
             `)
             .eq('status', 'pending')
             .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data;
+    },
+
+    /**
+     * Get Processing Withdrawals
+     */
+    async getProcessingWithdrawals() {
+        const { data, error } = await supabaseAdmin
+            .from('withdrawal_requests')
+            .select(`
+                *,
+                profiles ( email, username, bank_name, account_name, account_number )
+            `)
+            .eq('status', 'processing')
+            .order('created_at', { ascending: false });
+
+        if (error) throw error;
+        return data;
+    },
+
+    /**
+     * Mark Withdrawal as Processing
+     */
+    async processWithdrawal(withdrawalId: string) {
+        const { data, error } = await supabaseAdmin
+            .from('withdrawal_requests')
+            .update({ status: 'processing', processed_at: new Date().toISOString() })
+            .eq('id', withdrawalId)
+            .eq('status', 'pending')
+            .select()
+            .single();
 
         if (error) throw error;
         return data;

@@ -260,8 +260,8 @@ export default function WalletPage() {
                     </div>
                 </motion.div>
 
-                {/* Pending Withdrawals */}
-                {withdrawals.filter(w => w.status === 'pending').length > 0 && (
+                {/* Active Withdrawals */}
+                {withdrawals.filter(w => ['pending', 'processing'].includes(w.status)).length > 0 && (
                     <motion.div
                         initial={{ opacity: 0, y: 20 }}
                         animate={{ opacity: 1, y: 0 }}
@@ -270,18 +270,35 @@ export default function WalletPage() {
                     >
                         <h3 className="text-lg font-bold mb-4 flex items-center gap-2">
                             <Clock className="w-5 h-5 text-yellow-400" />
-                            Pending Withdrawals
+                            Active Withdrawals
                         </h3>
-                        <div className="space-y-3">
-                            {withdrawals.filter(w => w.status === 'pending').map((w) => (
-                                <div key={w.id} className="card-premium p-4 flex items-center justify-between">
-                                    <div>
-                                        <p className="font-bold">{formatCurrency(w.net_amount)}</p>
-                                        <p className="text-sm text-white/40">
-                                            Fee: {formatCurrency(w.fee)} • Hold until: {w.hold_until ? formatDate(w.hold_until) : 'N/A'}
-                                        </p>
+                        <div className="space-y-4">
+                            {withdrawals.filter(w => ['pending', 'processing'].includes(w.status)).map((w) => (
+                                <div key={w.id} className="card-premium p-4 flex flex-col gap-3">
+                                    <div className="flex items-center justify-between">
+                                        <div>
+                                            <p className="font-bold text-lg">{formatCurrency(w.net_amount)}</p>
+                                            <p className="text-sm text-white/40">
+                                                Fee: {formatCurrency(w.fee)} • Hold until: {w.hold_until ? formatDate(w.hold_until) : 'N/A'}
+                                            </p>
+                                        </div>
+                                        {getStatusBadge(w.status)}
                                     </div>
-                                    {getStatusBadge(w.status)}
+
+                                    {/* Progress tracking */}
+                                    <div className="w-full bg-slate-800 rounded-full h-1.5 mt-2 overflow-hidden">
+                                        <div
+                                            className={`h-1.5 rounded-full transition-all duration-500 ease-out ${w.status === 'processing' ? 'bg-blue-500 w-2/3'
+                                                    : w.status === 'completed' ? 'bg-green-500 w-full'
+                                                        : 'bg-yellow-500 w-1/3'
+                                                }`}
+                                        />
+                                    </div>
+                                    <div className="text-[10px] sm:text-xs flex justify-between px-1 mt-1 font-medium">
+                                        <span className={w.status === 'pending' ? 'text-yellow-400' : 'text-slate-500'}>Requested</span>
+                                        <span className={w.status === 'processing' ? 'text-blue-400' : w.status === 'completed' ? 'text-slate-500' : 'text-slate-600'}>Processing</span>
+                                        <span className={w.status === 'completed' ? 'text-green-400' : 'text-slate-600'}>Completed</span>
+                                    </div>
                                 </div>
                             ))}
                         </div>

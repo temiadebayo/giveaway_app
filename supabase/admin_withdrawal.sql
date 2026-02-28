@@ -11,7 +11,7 @@ BEGIN
     -- Get pending withdrawal
     SELECT * INTO v_withdrawal
     FROM public.withdrawal_requests
-    WHERE id = p_withdrawal_id AND status = 'pending';
+    WHERE id = p_withdrawal_id AND status IN ('pending', 'processing');
     
     IF v_withdrawal IS NULL THEN
         RETURN jsonb_build_object('success', false, 'error', 'Pending withdrawal not found or already processed');
@@ -41,7 +41,7 @@ BEGIN
     SET 
         status = 'completed',
         updated_at = NOW()
-    WHERE reference_id = p_withdrawal_id::TEXT AND type = 'withdrawal';
+    WHERE reference_id = p_withdrawal_id AND type = 'withdrawal';
 
     RETURN jsonb_build_object(
         'success', true,
@@ -87,7 +87,7 @@ BEGIN
         status = 'cancelled',
         description = 'Withdrawal rejected - refunded',
         updated_at = NOW()
-    WHERE reference_id = p_withdrawal_id::TEXT AND type = 'withdrawal';
+    WHERE reference_id = p_withdrawal_id AND type = 'withdrawal';
 
     -- Record refund transaction
     INSERT INTO public.wallet_transactions (
@@ -97,7 +97,7 @@ BEGIN
     )
     SELECT
         w.id, v_withdrawal.user_id, 'deposit', v_withdrawal.amount, 0, v_withdrawal.amount,
-        w.balance - v_withdrawal.amount, w.balance, 'withdrawal_refund', p_withdrawal_id::TEXT,
+        w.balance - v_withdrawal.amount, w.balance, 'withdrawal_refund', p_withdrawal_id,
         'Withdrawal rejected - amount refunded'
     FROM public.wallets w WHERE w.id = v_withdrawal.wallet_id;
 
