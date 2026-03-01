@@ -77,48 +77,13 @@ ON CONFLICT (id) DO UPDATE SET
     file_size_limit = 5242880,
     allowed_mime_types = ARRAY['image/jpeg', 'image/png', 'image/webp'];
 
--- Enable RLS on storage objects if not already
-ALTER TABLE storage.objects ENABLE ROW LEVEL SECURITY;
-
--- Drop existing storage policies for this bucket to ensure clean state
-DROP POLICY IF EXISTS "Users can upload their own KYC docs" ON storage.objects;
-DROP POLICY IF EXISTS "Users can view their own KYC docs" ON storage.objects;
-DROP POLICY IF EXISTS "Admins can view all KYC docs" ON storage.objects;
-
--- Create Storage Policies
--- Users can insert files into a folder that entirely matches their own auth.uid()
-CREATE POLICY "Users can upload their own KYC docs" 
-ON storage.objects FOR INSERT 
-WITH CHECK (
-    auth.uid() = owner AND bucket_id = 'kyc_documents' AND (select auth.uid()::text) = (string_to_array(name, '/'))[1]
-);
-
--- Users can view their own files
-CREATE POLICY "Users can view their own KYC docs" 
-ON storage.objects FOR SELECT 
-USING (
-    bucket_id = 'kyc_documents' AND auth.uid() = owner
-);
-
--- Admins can view ALL KYC docs
-CREATE POLICY "Admins can view all KYC docs" 
-ON storage.objects FOR SELECT 
-USING (
-    bucket_id = 'kyc_documents' AND EXISTS (
-        SELECT 1 FROM public.profiles 
-        WHERE id = auth.uid() AND is_host = true
-    )
-);
-
--- Admins can delete/manage KYC docs
-CREATE POLICY "Admins can delete KYC docs" 
-ON storage.objects FOR DELETE 
-USING (
-    bucket_id = 'kyc_documents' AND EXISTS (
-        SELECT 1 FROM public.profiles 
-        WHERE id = auth.uid() AND is_host = true
-    )
-);
+-- =============================================
+-- INSTRUCTION: The storage bucket is created, but policies must be set via Dashboard.
+-- Go to Supabase Dashboard -> Storage -> Policies -> 'kyc_documents'
+-- 1. Create Policy: "Users can upload their own KYC docs" (INSERT, FOR AUTHENTICATED)
+-- 2. Create Policy: "Users can view their own KYC docs" (SELECT, FOR AUTHENTICATED)
+-- 3. Create Policy: "Admins can view all KYC docs" (SELECT, FOR AUTHENTICATED)
+-- =============================================
 
 -- 4. Create Admin RPCs for Approval/Rejection
 
