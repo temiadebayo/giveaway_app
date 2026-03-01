@@ -452,9 +452,10 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
     };
 
     const formatPrize = (amount: number, currency: string = 'NGN') => {
+        // Force NGN display regardless of DB value for consistency
         return new Intl.NumberFormat('en-NG', {
             style: 'currency',
-            currency,
+            currency: 'NGN',
             minimumFractionDigits: 0,
         }).format(amount);
     };

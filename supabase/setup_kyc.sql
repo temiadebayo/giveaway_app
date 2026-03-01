@@ -31,7 +31,6 @@ ALTER TABLE public.kyc_requests ENABLE ROW LEVEL SECURITY;
 
 -- PostgREST role grants
 GRANT ALL ON TABLE public.kyc_requests TO anon, authenticated, service_role;
-GRANT ALL ON SEQUENCE public.kyc_requests_id_seq TO anon, authenticated, service_role;
 
 -- Policies for kyc_requests table
 DROP POLICY IF EXISTS "Users can view own kyc requests" ON public.kyc_requests;
