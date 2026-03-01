@@ -16,6 +16,7 @@ import {
     X
 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { PhoneVerificationModal } from "./phone-verification-modal";
 
 interface ProfileStep {
     key: string;
@@ -31,6 +32,8 @@ export function ProfileCompletionBanner() {
     const [loading, setLoading] = useState(true);
     const [dismissed, setDismissed] = useState(false);
     const [kycStatus, setKycStatus] = useState<string | null>(null);
+    const [isPhoneModalOpen, setIsPhoneModalOpen] = useState(false);
+    const [currentPhone, setCurrentPhone] = useState<string | undefined>();
 
     useEffect(() => {
         loadProfileStatus();
@@ -59,6 +62,7 @@ export function ProfileCompletionBanner() {
                 .single();
 
             setKycStatus(kyc?.status || null);
+            setCurrentPhone(profile?.phone || undefined);
 
             const profileSteps: ProfileStep[] = [
                 {
@@ -163,11 +167,13 @@ export function ProfileCompletionBanner() {
 
                     {/* Steps checklist */}
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mb-4">
-                        {steps.map((step) => (
-                            <Link href={step.href} key={step.key}>
+                        {steps.map((step) => {
+                            const isPhoneStep = step.key === "phone" && !step.completed;
+                            
+                            const InnerContent = (
                                 <div
                                     className={`
-                                        flex items-center gap-3 p-2.5 rounded-xl transition-all cursor-pointer
+                                        flex items-center gap-3 p-2.5 rounded-xl transition-all cursor-pointer w-full text-left
                                         ${step.completed
                                             ? "bg-green-500/10 border border-green-500/20"
                                             : "bg-white/5 border border-white/10 hover:border-orange-500/30 hover:bg-orange-500/5"
@@ -207,8 +213,26 @@ export function ProfileCompletionBanner() {
                                         <ChevronRight className="w-4 h-4 text-white/20 flex-shrink-0" />
                                     )}
                                 </div>
-                            </Link>
-                        ))}
+                            );
+
+                            if (isPhoneStep) {
+                                return (
+                                    <button 
+                                        key={step.key} 
+                                        onClick={() => setIsPhoneModalOpen(true)}
+                                        className="block w-full"
+                                    >
+                                        {InnerContent}
+                                    </button>
+                                );
+                            }
+
+                            return (
+                                <Link href={step.href} key={step.key} className="block w-full">
+                                    {InnerContent}
+                                </Link>
+                            );
+                        })}
                     </div>
 
                     {/* KYC status alerts */}
@@ -232,16 +256,37 @@ export function ProfileCompletionBanner() {
 
                     {/* CTA */}
                     {nextStep && (
-                        <Link href={nextStep.href}>
-                            <Button className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold shadow-lg shadow-orange-500/20">
+                        nextStep.key === "phone" ? (
+                            <Button 
+                                onClick={() => setIsPhoneModalOpen(true)}
+                                className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold shadow-lg shadow-orange-500/20"
+                            >
                                 <nextStep.icon className="w-4 h-4 mr-2" />
                                 {nextStep.label}
                                 <ChevronRight className="w-4 h-4 ml-2" />
                             </Button>
-                        </Link>
+                        ) : (
+                            <Link href={nextStep.href}>
+                                <Button className="w-full bg-gradient-to-r from-orange-500 to-amber-500 hover:from-orange-600 hover:to-amber-600 text-white font-bold shadow-lg shadow-orange-500/20">
+                                    <nextStep.icon className="w-4 h-4 mr-2" />
+                                    {nextStep.label}
+                                    <ChevronRight className="w-4 h-4 ml-2" />
+                                </Button>
+                            </Link>
+                        )
                     )}
                 </div>
             </motion.div>
+
+            <PhoneVerificationModal 
+                isOpen={isPhoneModalOpen}
+                onClose={() => setIsPhoneModalOpen(false)}
+                currentPhone={currentPhone}
+                onSuccess={() => {
+                    setIsPhoneModalOpen(false);
+                    loadProfileStatus(); // Refresh banner state
+                }}
+            />
         </AnimatePresence>
     );
 }
