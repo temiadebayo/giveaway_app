@@ -1897,7 +1897,7 @@
             UPDATE public.wallets
             SET 
                 balance = balance + v_escrow.amount,
-                total_earned = total_earned + v_escrow.amount,
+                total_deposited = total_deposited + v_escrow.amount,
                 updated_at = NOW()
             WHERE id = v_wallet.id;
             
