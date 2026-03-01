@@ -259,10 +259,22 @@ class GiveawayService {
 
         // Force a realtime broadcast to the lobby channel so the Host sees it immediately
         try {
-            await this.supabase.channel(`lobby:${giveawayId}`).send({
-                type: 'broadcast',
-                event: 'join',
-                payload: { type: 'user', userId: user.id, timestamp: Date.now() }
+            const channel = this.supabase.channel(`lobby:${giveawayId}`);
+            await new Promise<void>((resolve) => {
+                channel.subscribe(async (status) => {
+                    if (status === 'SUBSCRIBED') {
+                        await channel.send({
+                            type: 'broadcast',
+                            event: 'join',
+                            payload: { type: 'user', userId: user.id, timestamp: Date.now() }
+                        });
+                        channel.unsubscribe();
+                        resolve();
+                    }
+                    if (status === 'CHANNEL_ERROR' || status === 'TIMED_OUT') {
+                        resolve(); // Resolve anyway so we don't break the join
+                    }
+                });
             });
         } catch (broadcastErr) {
             console.error('Broadcast error (non-fatal):', broadcastErr);
