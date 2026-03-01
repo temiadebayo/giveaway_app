@@ -69,7 +69,7 @@ BEGIN
     -- 9. Fix profile win counts
     UPDATE public.profiles
     SET 
-        total_earnings = total_earnings + v_escrow.amount,
+        total_winnings = total_winnings + v_escrow.amount,
         total_wins = GREATEST(1, total_wins + 1),
         updated_at = NOW()
     WHERE id = v_user_id;
