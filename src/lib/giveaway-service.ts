@@ -257,6 +257,17 @@ class GiveawayService {
             return { success: false, error: error.message };
         }
 
+        // Force a realtime broadcast to the lobby channel so the Host sees it immediately
+        try {
+            await this.supabase.channel(`lobby:${giveawayId}`).send({
+                type: 'broadcast',
+                event: 'join',
+                payload: { type: 'user', userId: user.id, timestamp: Date.now() }
+            });
+        } catch (broadcastErr) {
+            console.error('Broadcast error (non-fatal):', broadcastErr);
+        }
+
         return { success: true };
     }
 
@@ -833,6 +844,15 @@ class GiveawayService {
                     filter: `giveaway_id=eq.${giveawayId}`
                 },
                 async () => {
+                    const participants = await this.getLobbyParticipants(giveawayId);
+                    callback(participants);
+                }
+            )
+            .on(
+                'broadcast',
+                { event: 'join' },
+                async () => {
+                    // Fallback explicit broadcast catch to ensure UI updates instantly
                     const participants = await this.getLobbyParticipants(giveawayId);
                     callback(participants);
                 }

@@ -102,6 +102,17 @@ export async function POST(
             );
         }
 
+        // Force a realtime broadcast to the lobby channel so the Host sees it immediately
+        try {
+            await supabase.channel(`lobby:${giveawayId}`).send({
+                type: 'broadcast',
+                event: 'join',
+                payload: { type: 'guest', fingerprintId, timestamp: Date.now() }
+            });
+        } catch (broadcastErr) {
+            console.error('Broadcast error (non-fatal):', broadcastErr);
+        }
+
         return NextResponse.json({ success: true });
     } catch (err) {
         console.error('Guest join error:', err);
