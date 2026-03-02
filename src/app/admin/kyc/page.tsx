@@ -92,14 +92,17 @@ export default function AdminKycPage() {
         setProcessingId(requestId);
 
         // Call the secure RPC
-        const { error } = await supabase.rpc('approve_kyc_request', {
+        const { data, error } = await supabase.rpc('approve_kyc_request', {
             p_request_id: requestId
         });
 
+        // Supabase RPC returns typed JSONB. `error` is for network failures, `data` contains our logic result
         if (error) {
-            alert(`Error approving: ${error.message}`);
+            alert(`Network Error: ${error.message}`);
+        } else if (data && typeof data === 'object' && !(data as any).success) {
+            alert(`Approval Failed: ${(data as any).error || 'Unknown error'}`);
         } else {
-            // Remove from local state
+            // Remove from local state only on true success
             setRequests(prev => prev.filter(r => r.id !== requestId));
         }
 
@@ -112,13 +115,15 @@ export default function AdminKycPage() {
 
         setProcessingId(requestId);
 
-        const { error } = await supabase.rpc('reject_kyc_request', {
+        const { data, error } = await supabase.rpc('reject_kyc_request', {
             p_request_id: requestId,
             p_reason: reason
         });
 
         if (error) {
-            alert(`Error rejecting: ${error.message}`);
+            alert(`Network Error: ${error.message}`);
+        } else if (data && typeof data === 'object' && !(data as any).success) {
+            alert(`Rejection Failed: ${(data as any).error || 'Unknown error'}`);
         } else {
             setRequests(prev => prev.filter(r => r.id !== requestId));
         }
