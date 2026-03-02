@@ -72,20 +72,19 @@ class TrustService {
         const { data: { user } } = await this.supabase.auth.getUser();
         if (!user) return null;
 
-        const { data, error } = await this.supabase
-            .from('kyc_requests')
-            .select('*')
-            .eq('user_id', user.id)
-            .order('created_at', { ascending: false })
-            .limit(1)
-            .single();
+            const { data, error } = await this.supabase
+                .from('kyc_requests')
+                .select('*')
+                .eq('user_id', user.id)
+                .order('created_at', { ascending: false })
+                .limit(1);
 
-        if (error && error.code !== 'PGRST116') {
+        if (error) {
             console.error('Error fetching KYC status:', error);
             return null;
         }
 
-        return data as KycRequest | null;
+        return data && data.length > 0 ? (data[0] as KycRequest) : null;
     }
 
     /**

@@ -53,15 +53,15 @@ export function ProfileCompletionBanner() {
                 .single();
 
             // Fetch KYC status
-            const { data: kyc } = await supabase
+            const { data: kycData } = await supabase
                 .from("kyc_requests")
                 .select("status")
                 .eq("user_id", user.id)
                 .order("created_at", { ascending: false })
-                .limit(1)
-                .single();
+                .limit(1);
 
-            setKycStatus(kyc?.status || null);
+            const kycStatus = kycData && kycData.length > 0 ? kycData[0].status : null;
+            setKycStatus(kycStatus);
             setCurrentPhone(profile?.phone || undefined);
 
             const profileSteps: ProfileStep[] = [
@@ -93,7 +93,7 @@ export function ProfileCompletionBanner() {
                     key: "kyc",
                     label: "Complete KYC verification",
                     icon: BadgeCheck,
-                    completed: !!profile?.id_verified || kyc?.status === "approved",
+                    completed: !!profile?.id_verified || kycStatus === "approved",
                     href: "/trust/kyc",
                     points: 30,
                 },
