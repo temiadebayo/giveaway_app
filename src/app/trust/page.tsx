@@ -23,6 +23,7 @@ import {
     TrendingDown,
     Minus
 } from "lucide-react";
+import logoWhite from "@/assets/logo_white.png";
 import ZackMascot from "@/assets/Zack_GA_Mascot_1.svg";
 
 export default function TrustScorePage() {

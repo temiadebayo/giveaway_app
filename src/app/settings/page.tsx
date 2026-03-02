@@ -208,6 +208,54 @@ export default function SettingsPage() {
                                         <p className="text-xs text-slate-500 mt-1">Required for Fair Play System verification.</p>
                                     </div>
 
+                                    {/* Banking Information Section */}
+                                    <div className="pt-6 border-t border-slate-800">
+                                        <h3 className="text-lg font-bold text-white mb-4">Banking Information</h3>
+                                        <p className="text-slate-400 text-sm mb-6">Enter your bank details for prize withdrawals. Ensure the account name matches your profile.</p>
+                                        
+                                        <div className="space-y-4">
+                                            {/* Bank Name */}
+                                            <div className="space-y-2">
+                                                <label htmlFor="bank_name" className="text-slate-300 font-medium text-sm">Bank Name</label>
+                                                <Input
+                                                    id="bank_name"
+                                                    value={profile.bank_name}
+                                                    onChange={(e) => setProfile({ ...profile, bank_name: e.target.value })}
+                                                    className="bg-slate-950 border-slate-800 focus:border-primary"
+                                                    placeholder="e.g. Zenith Bank"
+                                                    required
+                                                />
+                                            </div>
+
+                                            {/* Account Name */}
+                                            <div className="space-y-2">
+                                                <label htmlFor="account_name" className="text-slate-300 font-medium text-sm">Account Name</label>
+                                                <Input
+                                                    id="account_name"
+                                                    value={profile.account_name}
+                                                    onChange={(e) => setProfile({ ...profile, account_name: e.target.value })}
+                                                    className="bg-slate-950 border-slate-800 focus:border-primary"
+                                                    placeholder="e.g. John Doe"
+                                                    required
+                                                />
+                                            </div>
+
+                                            {/* Account Number */}
+                                            <div className="space-y-2">
+                                                <label htmlFor="account_number" className="text-slate-300 font-medium text-sm">Account Number</label>
+                                                <Input
+                                                    id="account_number"
+                                                    value={profile.account_number}
+                                                    onChange={(e) => setProfile({ ...profile, account_number: e.target.value.replace(/[^0-9]/g, '').slice(0, 10) })}
+                                                    className="bg-slate-950 border-slate-800 focus:border-primary"
+                                                    placeholder="10-digit account number"
+                                                    maxLength={10}
+                                                    required
+                                                />
+                                            </div>
+                                        </div>
+                                    </div>
+
                                     {/* Messages */}
                                     <AnimatePresence mode="wait">
                                         {successMessage && (

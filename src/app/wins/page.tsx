@@ -6,6 +6,7 @@ import Image from "next/image";
 import { motion } from "framer-motion";
 import { AppHeader } from "@/components/app-header";
 import { giveawayService } from "@/lib/giveaway-service";
+import { trustService } from "@/lib/trust-service";
 import { 
     Trophy, 
     ArrowLeft, 
@@ -16,7 +17,6 @@ import {
     TrendingUp,
     User as UserIcon
 } from "lucide-react";
-import logoWhite from "@/assets/logo_white.png";
 import NatMascot from "@/assets/Nat_GA_Mascot.svg";
 
 export default function WinsPage() {
@@ -30,7 +30,7 @@ export default function WinsPage() {
             try {
                 const [winsData, profileData] = await Promise.all([
                     giveawayService.getUserWins(),
-                    giveawayService.getProfile()
+                    trustService.getProfile()
                 ]);
                 setWins(winsData || []);
                 setProfile(profileData);

@@ -306,16 +306,36 @@ export default function DashboardPage() {
                             </div>
 
                             <div className="text-center py-10 bg-slate-950/50 rounded-xl border border-slate-800/50">
-                                <motion.div
-                                    initial={{ opacity: 0, y: 10 }}
-                                    animate={{ opacity: 1, y: 0 }}
-                                    transition={{ delay: 0.3 }}
-                                    className="flex flex-col items-center"
-                                >
-                                    <Image src={NatMascot} alt="Nat" width={100} height={100} className="mb-3 drop-shadow-md" />
-                                    <p className="text-slate-300 font-medium mb-1">No active giveaways</p>
-                                    <p className="text-sm text-slate-500">Check back soon or host your own!</p>
-                                </motion.div>
+                                {giveawaysLoading ? (
+                                    <div className="flex flex-col items-center">
+                                        <Loader2 className="w-8 h-8 animate-spin text-primary mb-2" />
+                                        <p className="text-slate-500 text-sm">Hunting for events...</p>
+                                    </div>
+                                ) : activeGiveaways.length > 0 ? (
+                                    <div className="flex flex-col items-center">
+                                        <div className="w-16 h-16 rounded-2xl bg-primary/10 flex items-center justify-center mb-4">
+                                            <Gamepad2 className="w-8 h-8 text-primary" />
+                                        </div>
+                                        <p className="text-white font-bold text-lg mb-1">
+                                            {activeGiveaways.length} Active {activeGiveaways.length === 1 ? 'Giveaway' : 'Giveaways'}
+                                        </p>
+                                        <p className="text-slate-500 text-sm mb-6">There are live events waiting for you!</p>
+                                        <Link href="/giveaways">
+                                            <Button className="bg-brand-gradient px-8">Join Now</Button>
+                                        </Link>
+                                    </div>
+                                ) : (
+                                    <motion.div
+                                        initial={{ opacity: 0, y: 10 }}
+                                        animate={{ opacity: 1, y: 0 }}
+                                        transition={{ delay: 0.3 }}
+                                        className="flex flex-col items-center"
+                                    >
+                                        <Image src={NatMascot} alt="Nat" width={100} height={100} className="mb-3 drop-shadow-md" />
+                                        <p className="text-slate-300 font-medium mb-1">No active giveaways</p>
+                                        <p className="text-sm text-slate-500">Check back soon or host your own!</p>
+                                    </motion.div>
+                                )}
                             </div>
                         </div>
                     </motion.div>
