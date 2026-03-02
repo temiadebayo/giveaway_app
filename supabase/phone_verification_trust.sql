@@ -1,5 +1,5 @@
 -- =============================================
--- PHONE VERIFICATION TRUST SCORE INTEGRATION
+-- PHONE VERIFICATION TRUST SCORE INTEGRATION (FIXED)
 -- Run this in Supabase SQL Editor
 -- =============================================
 
@@ -30,18 +30,16 @@ BEGIN
             NEW.withdrawal_limit := 10000;
         END IF;
 
-        -- Log the Trust Event
+        -- Log the Trust Event using the correct schema columns
         INSERT INTO public.trust_events (
-            user_id, event_type, points_change, previous_score, new_score, previous_tier, new_tier, description
+            user_id, event_type, score_before, score_after, score_change, reason
         ) VALUES (
             NEW.id,
             'phone_verified',
-            20,
             OLD.trust_score,
             NEW.trust_score,
-            OLD.trust_tier,
-            NEW.trust_tier,
-            'Verified phone number (+234...)'
+            NEW.trust_score - OLD.trust_score,
+            'Verified phone number'
         );
         
     END IF;
