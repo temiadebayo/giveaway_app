@@ -210,6 +210,14 @@ export function AppHeader({
                                                             My Wins
                                                         </Link>
                                                         <Link
+                                                            href="/trust"
+                                                            onClick={() => setIsMenuOpen(false)}
+                                                            className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-white/10 transition-colors"
+                                                        >
+                                                            <Shield className="w-4 h-4 text-white/60" />
+                                                            Trust Score
+                                                        </Link>
+                                                        <Link
                                                             href="/settings"
                                                             onClick={() => setIsMenuOpen(false)}
                                                             className="flex items-center gap-3 px-3 py-2 rounded-lg text-sm hover:bg-white/10 transition-colors"

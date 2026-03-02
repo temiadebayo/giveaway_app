@@ -211,7 +211,16 @@ class TrustService {
             fairWins: profile.total_wins,
         };
 
-        return calculateTrustScore(factors);
+        const breakdown = calculateTrustScore(factors);
+
+        // Use database values as source of truth for total and tier
+        // but keep the calculated breakdown for transparency
+        if (profile.trust_score !== undefined) {
+            breakdown.total = profile.trust_score;
+            breakdown.tier = profile.trust_tier;
+        }
+
+        return breakdown;
     }
 
     /**
