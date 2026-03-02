@@ -8,6 +8,8 @@ import { Button } from "@/components/ui/button";
 import { AppHeader } from "@/components/app-header";
 import { useAuth } from "@/hooks/use-auth";
 import { useFingerprint } from "@/hooks/use-fingerprint";
+import { useTrustScore } from "@/hooks/use-trust-score";
+import { giveawayService, Giveaway } from "@/lib/giveaway-service";
 import {
     Shield,
     Trophy,
@@ -18,20 +20,43 @@ import {
     Star,
     Zap,
     TrendingUp,
-    Sparkles
+    Sparkles,
+    Loader2
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { ProfileCompletionBanner } from "@/components/profile-completion-banner";
+import { TrustTierBadge } from "@/components/trust/trust-components";
 import FredMascot from "@/assets/Fred_GA_Mascot.svg";
 import NatMascot from "@/assets/Nat_GA_Mascot.svg";
 
 export default function DashboardPage() {
-    const { signOut, getUser, loading } = useAuth();
+    const { getUser } = useAuth();
     const { fingerprint } = useFingerprint();
     const [user, setUser] = useState<User | null>(null);
+    const [activeGiveaways, setActiveGiveaways] = useState<Giveaway[]>([]);
+    const [giveawaysLoading, setGiveawaysLoading] = useState(true);
+
+    const {
+        profile,
+        breakdown,
+        loading: trustLoading
+    } = useTrustScore();
 
     useEffect(() => {
         getUser().then(setUser);
+        
+        const loadGiveaways = async () => {
+            try {
+                const data = await giveawayService.getActiveGiveaways();
+                setActiveGiveaways(data || []);
+            } catch (err) {
+                console.error("Failed to load giveaways:", err);
+            } finally {
+                setGiveawaysLoading(false);
+            }
+        };
+        
+        loadGiveaways();
     }, [getUser]);
 
     const quickActions = [
@@ -40,6 +65,9 @@ export default function DashboardPage() {
         { icon: Trophy, label: "My Wins", href: "/wins", color: "from-yellow-500 to-orange-500" },
         { icon: Wallet, label: "Wallet", href: "/wallet", color: "from-green-500 to-emerald-500" },
     ];
+
+    const getTrustPoints = () => breakdown?.total ?? 0;
+    const getTrustTier = () => breakdown?.tier ?? 'bronze';
 
     return (
         <div className="min-h-screen bg-[#06060c] text-slate-200 font-sans selection:bg-primary/30">
@@ -118,7 +146,7 @@ export default function DashboardPage() {
                         transition={{ delay: 0.1, duration: 0.3 }}
                         className="lg:col-span-1 bg-slate-900 border border-slate-800 rounded-2xl p-6 min-w-0"
                     >
-                        {loading ? (
+                        {trustLoading ? (
                             <div className="animate-pulse flex flex-col items-center">
                                 <div className="w-24 h-24 rounded-2xl bg-white/10 mb-4" />
                                 <div className="h-6 w-32 bg-white/10 rounded mb-2" />
@@ -127,21 +155,25 @@ export default function DashboardPage() {
                         ) : (
                             <div className="flex flex-col items-center text-center mb-6">
                                 {/* Avatar */}
-                                <div className="w-24 h-24 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center mb-4">
-                                    <UserIcon className="w-12 h-12 text-slate-400" />
+                                <div className="w-24 h-24 rounded-2xl bg-slate-800 border border-slate-700 flex items-center justify-center mb-4 overflow-hidden relative">
+                                    {profile?.avatar_url ? (
+                                        <img src={profile.avatar_url} alt="" className="w-full h-full object-cover" />
+                                    ) : (
+                                        <UserIcon className="w-12 h-12 text-slate-400" />
+                                    )}
                                 </div>
 
                                 {/* Username */}
                                 <h2 className="text-xl font-bold mb-1 text-white">
-                                    {user?.user_metadata?.username || user?.email?.split('@')[0] || 'Player'}
+                                    {profile?.display_name || profile?.username || 'Player'}
                                 </h2>
                                 <p className="text-white/40 text-sm truncate max-w-full">
                                     {user?.email}
                                 </p>
 
                                 {/* Trust Tier Badge */}
-                                <div className="mt-4 px-5 py-2 rounded-full tier-bronze text-sm font-bold flex items-center gap-2">
-                                    🥉 Bronze Tier
+                                <div className="mt-4">
+                                    <TrustTierBadge tier={getTrustTier()} />
                                 </div>
                             </div>
                         )}
@@ -150,36 +182,45 @@ export default function DashboardPage() {
                         <div className="grid grid-cols-2 gap-3 mb-6">
                             <div className="bg-slate-950/50 rounded-xl p-4 text-center border border-slate-800/50">
                                 <Trophy className="w-5 h-5 mx-auto mb-1 text-primary" />
-                                <p className="text-2xl font-bold text-white">0</p>
+                                <p className="text-2xl font-bold text-white">{profile?.total_wins || 0}</p>
                                 <p className="text-xs text-slate-400">Wins</p>
                             </div>
                             <div className="bg-slate-950/50 rounded-xl p-4 text-center border border-slate-800/50">
                                 <TrendingUp className="w-5 h-5 mx-auto mb-1 text-primary" />
-                                <p className="text-2xl font-bold text-white">₦0</p>
+                                <p className="text-2xl font-bold text-white">₦{profile?.total_winnings?.toLocaleString() || 0}</p>
                                 <p className="text-xs text-slate-400">Earned</p>
                             </div>
                         </div>
 
                         {/* Trust Score */}
-                        <div className="p-4 bg-slate-950/50 rounded-xl border border-slate-800/50">
+                        <div className="p-4 bg-slate-950/50 rounded-xl border border-slate-800/50 cursor-pointer hover:bg-slate-900 transition-colors"
+                             onClick={() => window.location.href = '/trust'}>
                             <div className="flex items-center justify-between mb-2">
                                 <div className="flex items-center gap-2">
                                     <Shield className="w-4 h-4 text-primary" />
                                     <span className="text-sm text-slate-300">Trust Score</span>
                                 </div>
-                                <span className="text-sm font-bold text-white">20/100</span>
+                                <span className="text-sm font-bold text-white">{getTrustPoints()}/100</span>
                             </div>
                             <div className="h-2 bg-white/10 rounded-full overflow-hidden">
                                 <motion.div
                                     initial={{ width: 0 }}
-                                    animate={{ width: '20%' }}
+                                    animate={{ width: `${getTrustPoints()}%` }}
                                     transition={{ duration: 1, delay: 0.5 }}
                                     className="h-full bg-brand-gradient"
                                 />
                             </div>
                             <p className="text-xs text-white/40 mt-2">
-                                <Zap className="w-3 h-3 inline mr-1" />
-                                Verify phone to boost +20 points
+                                {profile?.id_verified ? (
+                                    <span className="text-green-400 flex items-center gap-1">
+                                        <Shield className="w-3 h-3" /> Identity Verified
+                                    </span>
+                                ) : (
+                                    <>
+                                        <Zap className="w-3 h-3 inline mr-1" />
+                                        Complete KYC to boost +30 points
+                                    </>
+                                )}
                             </p>
                         </div>
                     </motion.div>

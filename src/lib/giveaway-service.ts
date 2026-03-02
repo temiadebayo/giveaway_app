@@ -143,6 +143,39 @@ class GiveawayService {
     }
 
     /**
+     * Get giveaways won by the current user
+     */
+    async getUserWins(): Promise<any[]> {
+        const { data: { user } } = await this.supabase.auth.getUser();
+        if (!user) return [];
+
+        const { data, error } = await this.supabase
+            .from('giveaway_participants')
+            .select(`
+                score,
+                rank,
+                giveaway:giveaways!giveaway_id(
+                    id,
+                    title,
+                    prize_amount,
+                    prize_currency,
+                    ends_at,
+                    host:profiles!host_id(username, display_name, avatar_url)
+                )
+            `)
+            .eq('user_id', user.id)
+            .eq('is_winner', true)
+            .order('joined_at', { ascending: false });
+
+        if (error) {
+            console.error('Error fetching user wins:', error);
+            return [];
+        }
+
+        return data || [];
+    }
+
+    /**
      * Get a single giveaway by ID
      */
     async getGiveaway(id: string): Promise<Giveaway | null> {

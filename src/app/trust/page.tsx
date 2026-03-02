@@ -23,7 +23,7 @@ import {
     TrendingDown,
     Minus
 } from "lucide-react";
-import logoWhite from "@/assets/logo_white.png";
+import ZackMascot from "@/assets/Zack_GA_Mascot_1.svg";
 
 export default function TrustScorePage() {
     const {
@@ -40,7 +40,7 @@ export default function TrustScorePage() {
 
     if (loading) {
         return (
-            <main className="min-h-screen bg-aurora flex items-center justify-center">
+            <main className="min-h-screen bg-[#06060c] flex items-center justify-center">
                 <div className="text-center">
                     <Loader2 className="w-12 h-12 animate-spin mx-auto mb-4 text-primary" />
                     <p className="text-white/60">Loading trust data...</p>
@@ -51,8 +51,8 @@ export default function TrustScorePage() {
 
     if (error || !profile || !breakdown) {
         return (
-            <main className="min-h-screen bg-aurora flex items-center justify-center">
-                <div className="text-center card-premium p-8 max-w-md">
+            <main className="min-h-screen bg-[#06060c] flex items-center justify-center">
+                <div className="text-center bg-slate-900/50 border border-slate-800 p-8 max-w-md rounded-2xl">
                     <Shield className="w-12 h-12 mx-auto mb-4 text-red-400" />
                     <h2 className="text-xl font-bold mb-2">Unable to Load</h2>
                     <p className="text-white/60 mb-4">{error || "Please sign in to view your trust score"}</p>
@@ -65,7 +65,7 @@ export default function TrustScorePage() {
     }
 
     return (
-        <main className="min-h-screen bg-aurora overflow-x-hidden">
+        <main className="min-h-screen bg-[#06060c] overflow-x-hidden text-slate-200">
             {/* Navbar */}
             <nav className="sticky top-0 z-50 px-3 sm:px-6 py-3 sm:py-4 glass">
                 <div className="max-w-7xl mx-auto flex items-center justify-between">
@@ -76,7 +76,7 @@ export default function TrustScorePage() {
                     <Button
                         variant="ghost"
                         onClick={recalculate}
-                        className="text-white/60 hover:text-white"
+                        className="text-white/60 hover:text-white hover:bg-white/5"
                     >
                         <RefreshCw className="w-4 h-4 mr-2" />
                         Refresh
@@ -84,7 +84,7 @@ export default function TrustScorePage() {
                 </div>
             </nav>
 
-            <div className="max-w-7xl mx-auto px-3 py-4 sm:p-6">
+            <div className="max-w-7xl mx-auto px-3 py-4 sm:p-6 pb-20">
                 {/* Back button */}
                 <Link
                     href="/dashboard"
@@ -100,14 +100,23 @@ export default function TrustScorePage() {
                     animate={{ opacity: 1, y: 0 }}
                     className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8"
                 >
-                    <div>
-                        <h1 className="text-3xl md:text-4xl font-black mb-2 flex items-center gap-3">
-                            <Shield className="w-8 h-8 text-primary" />
+                    <div className="relative">
+                        <h1 className="text-3xl md:text-5xl font-black mb-2 flex items-center gap-3">
+                            <Shield className="w-10 h-10 text-primary" />
                             Trust Score<span className="text-primary">™</span>
                         </h1>
-                        <p className="text-white/60">Your Fair Play reputation across the platform</p>
+                        <p className="text-white/60 text-lg">Your Reputation & Platform Perks</p>
                     </div>
-                    <TrustTierBadge tier={breakdown.tier} size="lg" />
+                    <div className="flex items-center gap-4">
+                        <motion.div
+                            initial={{ scale: 0.8, opacity: 0 }}
+                            animate={{ scale: 1, opacity: 1 }}
+                            className="hidden lg:block mr-4"
+                        >
+                            <Image src={ZackMascot} alt="Zack" width={120} height={120} className="drop-shadow-2xl" />
+                        </motion.div>
+                        <TrustTierBadge tier={breakdown.tier} size="lg" />
+                    </div>
                 </motion.div>
 
                 {/* Main Score */}
