@@ -1050,7 +1050,7 @@
                 UPDATE public.profiles
                 SET 
                     total_wins = total_wins + 1,
-                    total_earnings = total_earnings + v_individual_prize,
+                    total_winnings = total_winnings + v_individual_prize,
                     updated_at = NOW()
                 WHERE id = v_winners.user_id;
 
