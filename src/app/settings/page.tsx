@@ -714,7 +714,7 @@ export default function SettingsPage() {
         <div className="min-h-screen bg-[#06060c] text-slate-200 font-sans selection:bg-primary/30">
             <AppHeader />
 
-            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8 mt-16">
+            <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-4 pb-8 mt-16">
                 <Breadcrumbs items={[{ label: 'Settings' }]} />
 
                 <div className="flex flex-col md:flex-row gap-6 mt-6">
