@@ -7,6 +7,7 @@ import { useRouter, usePathname } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { createClient } from "@/lib/supabase";
 import { User } from "@supabase/supabase-js";
+import { useNotifications } from "@/hooks/use-notifications";
 import {
     LogOut,
     User as UserIcon,
@@ -19,7 +20,9 @@ import {
     Home,
     Gift,
     Plus,
-    Shield
+    Shield,
+    Bell,
+    CheckCheck
 } from "lucide-react";
 import logoWhite from "@/assets/logo_white.png";
 
@@ -29,6 +32,17 @@ interface Profile {
     avatar_url: string | null;
     trust_tier: string;
     accepted_tos?: boolean;
+}
+
+function formatTimeAgo(dateStr: string): string {
+    const now = Date.now();
+    const then = new Date(dateStr).getTime();
+    const diff = Math.floor((now - then) / 1000);
+    if (diff < 60) return 'Just now';
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    if (diff < 604800) return `${Math.floor(diff / 86400)}d ago`;
+    return new Date(dateStr).toLocaleDateString();
 }
 
 interface AppHeaderProps {
@@ -50,6 +64,8 @@ export function AppHeader({
     const [profile, setProfile] = useState<Profile | null>(null);
     const [isMenuOpen, setIsMenuOpen] = useState(false);
     const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+    const [isNotifOpen, setIsNotifOpen] = useState(false);
+    const { notifications, unreadCount, markAsRead, markAllRead } = useNotifications();
 
     const router = useRouter();
     const pathname = usePathname();
@@ -128,6 +144,75 @@ export function AppHeader({
                     {/* Right - User & Actions */}
                     <div className="flex items-center gap-2 sm:gap-3">
                         {rightContent}
+
+                        {/* Notification Bell */}
+                        {user && (
+                            <div className="relative">
+                                <button
+                                    onClick={() => { setIsNotifOpen(!isNotifOpen); setIsMenuOpen(false); }}
+                                    className="relative p-2 rounded-lg hover:bg-white/10 transition-colors"
+                                    aria-label="Notifications"
+                                >
+                                    <Bell className="w-5 h-5 text-white/70" />
+                                    {unreadCount > 0 && (
+                                        <span className="absolute -top-0.5 -right-0.5 w-4 h-4 bg-red-500 text-white text-[10px] font-bold rounded-full flex items-center justify-center animate-pulse">
+                                            {unreadCount > 9 ? '9+' : unreadCount}
+                                        </span>
+                                    )}
+                                </button>
+
+                                <AnimatePresence>
+                                    {isNotifOpen && (
+                                        <>
+                                            <div className="fixed inset-0 z-40" onClick={() => setIsNotifOpen(false)} />
+                                            <motion.div
+                                                initial={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                animate={{ opacity: 1, y: 0, scale: 1 }}
+                                                exit={{ opacity: 0, y: 10, scale: 0.95 }}
+                                                className="absolute right-0 top-full mt-2 w-80 max-h-[400px] rounded-xl bg-gray-900 border border-white/10 shadow-2xl z-50 overflow-hidden flex flex-col"
+                                            >
+                                                <div className="p-3 border-b border-white/10 flex items-center justify-between">
+                                                    <span className="text-sm font-bold text-white">Notifications</span>
+                                                    {unreadCount > 0 && (
+                                                        <button onClick={markAllRead} className="text-xs text-primary hover:text-primary/80 flex items-center gap-1">
+                                                            <CheckCheck className="w-3 h-3" /> Mark all read
+                                                        </button>
+                                                    )}
+                                                </div>
+                                                <div className="overflow-y-auto flex-1">
+                                                    {notifications.length === 0 ? (
+                                                        <div className="p-6 text-center">
+                                                            <Bell className="w-8 h-8 text-white/20 mx-auto mb-2" />
+                                                            <p className="text-xs text-white/40">No notifications yet</p>
+                                                        </div>
+                                                    ) : (
+                                                        notifications.map((notif) => (
+                                                            <Link
+                                                                key={notif.id}
+                                                                href={notif.link || '/dashboard'}
+                                                                onClick={() => { markAsRead(notif.id); setIsNotifOpen(false); }}
+                                                                className={`block p-3 border-b border-white/5 hover:bg-white/5 transition-colors ${
+                                                                    !notif.is_read ? 'bg-primary/5' : ''
+                                                                }`}
+                                                            >
+                                                                <div className="flex items-start gap-2">
+                                                                    {!notif.is_read && <span className="mt-1.5 w-2 h-2 rounded-full bg-primary shrink-0" />}
+                                                                    <div className="flex-1 min-w-0">
+                                                                        <p className="text-sm font-medium text-white truncate">{notif.title}</p>
+                                                                        <p className="text-xs text-white/50 mt-0.5 line-clamp-2">{notif.message}</p>
+                                                                        <p className="text-[10px] text-white/30 mt-1">{formatTimeAgo(notif.created_at)}</p>
+                                                                    </div>
+                                                                </div>
+                                                            </Link>
+                                                        ))
+                                                    )}
+                                                </div>
+                                            </motion.div>
+                                        </>
+                                    )}
+                                </AnimatePresence>
+                            </div>
+                        )}
 
                         {user ? (
                             <>

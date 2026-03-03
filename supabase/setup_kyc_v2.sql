@@ -147,6 +147,15 @@ BEGIN
         updated_at = NOW()
     WHERE id = v_request.user_id;
 
+    -- Notify the user
+    INSERT INTO public.notifications (user_id, type, title, message, link)
+    VALUES (
+        v_request.user_id, 'kyc',
+        '✅ Identity Verified',
+        'Your KYC has been approved! You are now Gold tier with enhanced withdrawal limits.',
+        '/trust'
+    );
+
     RETURN jsonb_build_object('success', true);
 END;
 $$ LANGUAGE plpgsql SECURITY DEFINER;

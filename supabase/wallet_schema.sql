@@ -444,6 +444,16 @@ BEGIN
             updated_at = NOW()
         WHERE id = v_winners.user_id;
 
+        -- Notify the winner
+        INSERT INTO public.notifications (user_id, type, title, message, link, payload)
+        VALUES (
+            v_winners.user_id, 'win',
+            '🎉 You Won!',
+            'You won ₦' || v_individual_prize || ' in "' || v_giveaway.title || '"! Claim your prize.',
+            '/wallet',
+            jsonb_build_object('giveaway_id', p_giveaway_id, 'amount', v_individual_prize)
+        );
+
         -- Build winner list JSON array for return
         v_winner_list := v_winner_list || jsonb_build_object(
             'user_id', v_winners.user_id,
