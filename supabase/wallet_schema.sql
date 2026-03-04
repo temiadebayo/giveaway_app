@@ -152,7 +152,8 @@ CREATE TRIGGER on_profile_created_create_wallet
 CREATE OR REPLACE FUNCTION public.request_withdrawal(
     p_amount DECIMAL,
     p_fee_percentage DECIMAL DEFAULT 3.0,
-    p_hold_hours INTEGER DEFAULT 48
+    p_hold_hours INTEGER DEFAULT 48,
+    p_payout_details JSONB DEFAULT NULL
 )
 RETURNS JSONB AS $$
 DECLARE
@@ -189,11 +190,11 @@ BEGIN
     -- Create withdrawal request
     INSERT INTO public.withdrawal_requests (
         user_id, wallet_id, amount, fee, net_amount, fee_percentage, 
-        hold_until, status
+        payout_details, hold_until, status
     )
     VALUES (
         auth.uid(), v_wallet.id, p_amount, v_fee, v_net_amount, p_fee_percentage,
-        NOW() + (p_hold_hours || ' hours')::INTERVAL, 'pending'
+        p_payout_details, NOW() + (p_hold_hours || ' hours')::INTERVAL, 'pending'
     )
     RETURNING id INTO v_withdrawal_id;
     
@@ -206,7 +207,7 @@ BEGIN
     VALUES (
         v_wallet.id, auth.uid(), 'withdrawal', p_amount, v_fee, v_net_amount,
         v_wallet.balance, v_wallet.balance - p_amount, 'withdrawal', v_withdrawal_id,
-        'Withdrawal request - ' || v_hold_hours || 'h hold'
+        'Withdrawal request - ' || p_hold_hours || 'h hold'
     );
     
     RETURN jsonb_build_object(
