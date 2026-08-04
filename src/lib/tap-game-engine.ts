@@ -220,6 +220,25 @@ class TapGameEngine {
     }
 
     /**
+     * Tap timings as whole milliseconds from the start of the round.
+     *
+     * This is what gets submitted — the score itself is no longer sent as an input,
+     * because a number the client chooses is a number the client can choose freely.
+     * score_tap_run() in SQL replays these offsets under the same rules used here and
+     * produces the authoritative score.
+     *
+     * Offsets rather than absolute timestamps: smaller payload, and immune to a client
+     * clock that disagrees with the server's.
+     *
+     * Only accepted taps appear here. Taps rejected for breaching MIN_TAP_INTERVAL_MS
+     * are never recorded, so the server replays exactly the sequence that scored.
+     */
+    getTapOffsets(): number[] {
+        if (this.gameStartTime === 0) return [];
+        return this.tapHistory.map(t => Math.max(0, Math.round(t.timestamp - this.gameStartTime)));
+    }
+
+    /**
      * Validate tap pattern (anti-cheat)
      */
     validateTapPattern(): { valid: boolean; confidence: number; flags: string[] } {

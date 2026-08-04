@@ -6,8 +6,17 @@ export async function GET(request: Request) {
     const code = requestUrl.searchParams.get('code')
     const error_param = requestUrl.searchParams.get('error')
     const error_description = requestUrl.searchParams.get('error_description')
-    const fingerprint = requestUrl.searchParams.get('fingerprint')
     const origin = requestUrl.origin
+
+    // NOTE: guest history is no longer linked here.
+    //
+    // This route used to accept a `fingerprint` query parameter and link every guest
+    // record matching it. Two problems: a fingerprint is publicly observable (so it
+    // authorised nothing), and putting a credential in a URL leaks it into browser
+    // history, Referer headers and server access logs.
+    //
+    // The claim now happens client-side against the guest session token in localStorage,
+    // which never leaves that browser except in a POST body. See GuestSessionClaimer.
 
     console.log('[Auth Callback] Origin:', origin)
     console.log('[Auth Callback] Has code:', !!code)
@@ -36,21 +45,6 @@ export async function GET(request: Request) {
             }
 
             if (data.user) {
-                // Link guest participations to user account
-                if (fingerprint) {
-                    try {
-                        const { data: linkResult } = await supabase
-                            .rpc('link_guest_to_user', { p_fingerprint_id: fingerprint });
-
-                        if (linkResult?.linked_count > 0) {
-                            console.log(`Linked ${linkResult.linked_count} guest participation(s) to user ${data.user.id}`);
-                            return NextResponse.redirect(`${origin}/dashboard?linked=${linkResult.linked_count}`);
-                        }
-                    } catch (err) {
-                        console.error('[Auth Callback] Guest linking error:', err);
-                    }
-                }
-
                 console.log('[Auth Callback] Success! Redirecting to dashboard for user:', data.user.id)
                 return NextResponse.redirect(`${origin}/dashboard`)
             }

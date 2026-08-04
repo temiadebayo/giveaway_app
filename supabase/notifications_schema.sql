@@ -19,6 +19,10 @@ CREATE TABLE IF NOT EXISTS public.notifications (
 -- 2. RLS
 ALTER TABLE public.notifications ENABLE ROW LEVEL SECURITY;
 
+-- Grant table-level access (required for PostgREST)
+GRANT SELECT, INSERT, UPDATE ON public.notifications TO authenticated;
+GRANT SELECT, INSERT, UPDATE ON public.notifications TO service_role;
+
 DROP POLICY IF EXISTS "Users read own notifications" ON public.notifications;
 CREATE POLICY "Users read own notifications" ON public.notifications
     FOR SELECT USING (auth.uid() = user_id);
@@ -39,8 +43,12 @@ CREATE INDEX IF NOT EXISTS idx_notif_user_unread
 CREATE INDEX IF NOT EXISTS idx_notif_user_created
     ON public.notifications(user_id, created_at DESC);
 
--- 4. Enable Realtime
-ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+-- 4. Enable Realtime (skip if already added)
+DO $$ BEGIN
+    ALTER PUBLICATION supabase_realtime ADD TABLE public.notifications;
+EXCEPTION WHEN duplicate_object THEN
+    NULL; -- already added, skip
+END $$;
 
 -- 5. Helper RPC: mark all as read
 CREATE OR REPLACE FUNCTION public.mark_all_notifications_read()

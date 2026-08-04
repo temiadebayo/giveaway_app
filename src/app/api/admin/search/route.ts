@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { getCurrentAdmin } from '@/lib/admin-auth';
 
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -8,10 +9,26 @@ const supabaseAdmin = createClient(
 );
 
 export async function GET(request: Request) {
-    const { searchParams } = new URL(request.url);
-    const q = searchParams.get('q')?.trim();
+    // This route reads profiles.email and wallet_transactions through the service role,
+    // which bypasses RLS. It previously had no authorization check of any kind:
+    // GET /api/admin/search?q=a returned user emails to anyone who asked.
+    if (!(await getCurrentAdmin())) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 403 });
+    }
 
-    if (!q || q.length < 2) {
+    const { searchParams } = new URL(request.url);
+    const raw = searchParams.get('q')?.trim();
+
+    if (!raw || raw.length < 2) {
+        return NextResponse.json({ users: [], giveaways: [], transactions: [] });
+    }
+
+    // `q` is interpolated into PostgREST .or() filter strings below. Commas, parentheses
+    // and dots are the filter grammar's delimiters, so an unsanitised value can restructure
+    // the query rather than just filter it. Strip them and cap the length.
+    const q = raw.replace(/[(),.*:"'\\%]/g, '').slice(0, 64);
+
+    if (q.length < 2) {
         return NextResponse.json({ users: [], giveaways: [], transactions: [] });
     }
 

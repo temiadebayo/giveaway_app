@@ -13,7 +13,8 @@ import {
     Wallet,
     LogOut,
     BadgeCheck,
-    Search
+    Search,
+    Shield
 } from 'lucide-react';
 import logoWhite from '@/assets/logo_white.png';
 
@@ -81,6 +82,10 @@ export default async function AdminLayout({
                     <NavLink href="/admin/giveaways" icon={<Gift />}>Giveaways</NavLink>
                     <NavLink href="/admin/finance" icon={<Wallet />}>Finance</NavLink>
                     <NavLink href="/admin/kyc" icon={<BadgeCheck />}>KYC Verifications</NavLink>
+                    <p className="px-3 py-2 text-[10px] font-semibold uppercase tracking-widest text-slate-600">
+                        System
+                    </p>
+                    <NavLink href="/admin/fps" icon={<Shield />}>FairPlay System</NavLink>
                 </nav>
 
                 {/* Footer */}

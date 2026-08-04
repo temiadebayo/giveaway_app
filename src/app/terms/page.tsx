@@ -22,11 +22,8 @@ export default function AppTermsPage() {
             return;
         }
 
-        const { data: profile } = await supabase
-            .from('profiles')
-            .select('accepted_tos')
-            .eq('id', user.id)
-            .single();
+        // accepted_tos is not in the public column grant — read own row via the RPC.
+        const { data: profile } = await supabase.rpc('get_my_profile');
 
         if (profile?.accepted_tos) {
             setAlreadyAccepted(true);

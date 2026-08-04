@@ -29,7 +29,9 @@ export interface Profile {
     total_wins: number;
     total_winnings: number;
     withdrawal_limit: number;
-    is_host: boolean;
+    // is_host is gone. It was an authorization flag users could set on themselves,
+    // which gated KYC approval and access to uploaded ID documents. Admin privilege
+    // now lives in public.admin_users — see src/lib/admin-auth.ts.
     is_banned: boolean;
     created_at: string;
 }
@@ -157,22 +159,23 @@ class TrustService {
     /**
      * Get current user's profile
      */
+    /**
+     * Get the current user's own profile, including the private columns.
+     *
+     * `select('*')` no longer works here: email, phone, bank details, trust_score and
+     * moderation state are column-revoked from `authenticated` so that one user cannot
+     * read another's. get_my_profile() returns the caller's own row in full and takes
+     * no arguments, so there is no user_id to tamper with.
+     */
     async getProfile(): Promise<Profile | null> {
-        const { data: { user } } = await this.supabase.auth.getUser();
-        if (!user) return null;
-
-        const { data, error } = await this.supabase
-            .from('profiles')
-            .select('*')
-            .eq('id', user.id)
-            .single();
+        const { data, error } = await this.supabase.rpc('get_my_profile');
 
         if (error) {
             console.error('Error fetching profile:', error);
             return null;
         }
 
-        return data as Profile;
+        return (data as Profile) ?? null;
     }
 
     /**
@@ -332,61 +335,21 @@ class TrustService {
         if (!user) return false;
 
         try {
-            // Check if fingerprint already exists
-            let { data: existingFp } = await this.supabase
-                .from('device_fingerprints')
-                .select('id, times_seen')
-                .eq('fingerprint_hash', fingerprint.hash)
-                .single();
+            // register_device() upserts the fingerprint and links it to the caller in one
+            // transaction. Writing these tables from the browser meant a client could also
+            // clear is_flagged on a device the fraud system had marked — the table's policy
+            // was `for all using (true)`.
+            const { data, error } = await this.supabase.rpc('register_device', {
+                p_hash: fingerprint.hash,
+                p_canvas: fingerprint.canvas ?? null,
+                p_webgl: fingerprint.webgl ?? null,
+                p_audio: fingerprint.audio ?? null,
+                p_screen: fingerprint.screen ?? null,
+                p_confidence: fingerprint.confidence,
+            });
 
-            let fingerprintId: string;
-
-            if (existingFp) {
-                // Update existing fingerprint
-                fingerprintId = existingFp.id;
-                await this.supabase
-                    .from('device_fingerprints')
-                    .update({
-                        times_seen: existingFp.times_seen + 1,
-                        last_seen_at: new Date().toISOString(),
-                        confidence: fingerprint.confidence,
-                    })
-                    .eq('id', fingerprintId);
-            } else {
-                // Create new fingerprint
-                const { data: newFp, error } = await this.supabase
-                    .from('device_fingerprints')
-                    .insert({
-                        fingerprint_hash: fingerprint.hash,
-                        canvas_hash: fingerprint.canvas,
-                        webgl_info: fingerprint.webgl,
-                        audio_hash: fingerprint.audio,
-                        screen_info: fingerprint.screen,
-                        confidence: fingerprint.confidence,
-                    })
-                    .select('id')
-                    .single();
-
-                if (error || !newFp) {
-                    console.error('Error creating fingerprint:', error);
-                    return false;
-                }
-                fingerprintId = newFp.id;
-            }
-
-            // Link user to device
-            const { error: linkError } = await this.supabase
-                .from('user_devices')
-                .upsert({
-                    user_id: user.id,
-                    fingerprint_id: fingerprintId,
-                    last_used_at: new Date().toISOString(),
-                }, {
-                    onConflict: 'user_id,fingerprint_id',
-                });
-
-            if (linkError) {
-                console.error('Error linking device:', linkError);
+            if (error || !data?.success) {
+                console.error('Error registering device:', error?.message || data?.error);
                 return false;
             }
 
@@ -398,36 +361,32 @@ class TrustService {
     }
 
     /**
-     * Update trust score
-     */
-    async updateTrustScore(newScore: number, reason: string): Promise<boolean> {
-        const { data: { user } } = await this.supabase.auth.getUser();
-        if (!user) return false;
-
-        const clampedScore = Math.max(0, Math.min(100, newScore));
-
-        const { error } = await this.supabase
-            .from('profiles')
-            .update({ trust_score: clampedScore })
-            .eq('id', user.id);
-
-        if (error) {
-            console.error('Error updating trust score:', error);
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Recalculate and sync trust score
+     * Recalculate the trust score from server-side facts.
+     *
+     * The browser used to compute the score and write profiles.trust_score directly —
+     * which, with the blanket UPDATE grant, meant a user could simply set themselves to
+     * 100 and become Diamond tier (raising their withdrawal limit and dropping their
+     * withdrawal cooldown from 48 hours to 6).
+     *
+     * recalculate_trust_score() re-derives every input from the database — email and
+     * phone confirmation state, KYC status, account age, linked devices, shared-device
+     * penalties, win history — using the same weights as trust-engine.ts. The client can
+     * ask for a recalculation but cannot influence the result.
      */
     async recalculateTrustScore(): Promise<number | null> {
-        const breakdown = await this.getTrustBreakdown();
-        if (!breakdown) return null;
+        const { data, error } = await this.supabase.rpc('recalculate_trust_score');
 
-        await this.updateTrustScore(breakdown.total, 'Score recalculated');
-        return breakdown.total;
+        if (error) {
+            console.error('Error recalculating trust score:', error);
+            return null;
+        }
+
+        if (!data?.success) {
+            console.error('Trust recalculation rejected:', data?.error);
+            return null;
+        }
+
+        return data.score as number;
     }
 }
 

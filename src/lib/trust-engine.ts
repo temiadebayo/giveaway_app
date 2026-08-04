@@ -107,7 +107,7 @@ export const TIER_BENEFITS = {
         color: 'from-gray-400 to-gray-600',
         withdrawalLimit: 500,
         withdrawalHoldHours: 48,
-        canHost: false,
+        canHost: true,
         maxEventValue: 500,
     },
     gold: {
@@ -124,7 +124,7 @@ export const TIER_BENEFITS = {
         emoji: '💎',
         color: 'from-cyan-400 to-blue-500',
         withdrawalLimit: 10000,
-        withdrawalHoldHours: 0, // Instant
+        withdrawalHoldHours: 4,
         canHost: true,
         maxEventValue: 10000,
     },

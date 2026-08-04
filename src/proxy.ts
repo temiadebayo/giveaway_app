@@ -36,8 +36,19 @@ export async function proxy(request: NextRequest) {
     // Refresh session if expired
     const { data: { user } } = await supabase.auth.getUser()
 
-    // Protected routes (giveaways are PUBLIC for guest access)
-    const protectedRoutes = ['/dashboard', '/wallet', '/settings']
+    // Protected routes.
+    // /giveaways/* stays public on purpose — guests join and play without an account.
+    // /giveaways/create is the exception: hosting moves real money, so it needs a session.
+    // /admin is not listed here because its layout does a server-side is_admin() check;
+    // adding it would only produce a redirect to /login instead of /dashboard.
+    const protectedRoutes = [
+        '/dashboard',
+        '/wallet',
+        '/settings',
+        '/wins',
+        '/trust',
+        '/giveaways/create',
+    ]
     const isProtectedRoute = protectedRoutes.some(route =>
         request.nextUrl.pathname.startsWith(route)
     )

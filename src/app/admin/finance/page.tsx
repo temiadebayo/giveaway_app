@@ -1,6 +1,7 @@
 import { adminService } from '@/lib/admin-service';
 import { ArrowDownLeft, ArrowUpRight, Clock, CheckCircle, XCircle } from 'lucide-react';
 import { FinanceBulkList } from '@/components/admin/finance-bulk-list';
+import { DisputePanel } from '@/components/admin/dispute-panel';
 import {
     singleApproveDepositAction, singleRejectDepositAction,
     bulkApproveDepositsAction, bulkRejectDepositsAction,
@@ -10,10 +11,11 @@ import {
 } from './actions';
 
 export default async function AdminFinancePage() {
-    const [pendingDeposits, pendingWithdrawals, processingWithdrawals] = await Promise.all([
+    const [pendingDeposits, pendingWithdrawals, processingWithdrawals, claimedGiveaways] = await Promise.all([
         adminService.getPendingDeposits(),
         adminService.getPendingWithdrawals(),
         adminService.getProcessingWithdrawals(),
+        adminService.getClaimedGiveaways(),
     ]);
 
     return (
@@ -146,6 +148,11 @@ export default async function AdminFinancePage() {
                         }}
                     />
                 </div>
+            </div>
+
+            {/* Dispute Management */}
+            <div className="mt-8">
+                <DisputePanel giveaways={(claimedGiveaways || []) as any} />
             </div>
         </div>
     );

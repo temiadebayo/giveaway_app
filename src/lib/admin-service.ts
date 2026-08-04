@@ -1,11 +1,5 @@
 import { createClient } from "@supabase/supabase-js";
 
-// Admin Whitelist
-const ADMIN_EMAILS = [
-    "temiadebayo1@gmail.com",
-    // Add other admins here
-];
-
 // Service Role Client (Bypasses RLS)
 const supabaseAdmin = createClient(
     process.env.NEXT_PUBLIC_SUPABASE_URL!,
@@ -20,11 +14,28 @@ const supabaseAdmin = createClient(
 
 export const adminService = {
     /**
-     * Check if user is admin based on email
+     * Check if a user is an admin.
+     *
+     * Reads public.admin_users — the single source of truth since Phase 0.
+     * The previous implementation compared against a hardcoded email array that was
+     * duplicated in the KYC route and disagreed with the profiles.is_host flag used
+     * by the SQL functions. See src/lib/admin-auth.ts.
      */
     async checkIsAdmin(email: string | undefined): Promise<boolean> {
         if (!email) return false;
-        return ADMIN_EMAILS.includes(email);
+
+        const { data, error } = await supabaseAdmin
+            .from('admin_users')
+            .select('user_id')
+            .ilike('email', email)
+            .maybeSingle();
+
+        if (error) {
+            console.error('Admin check failed:', error.message);
+            return false;
+        }
+
+        return Boolean(data);
     },
 
     /**
@@ -112,9 +123,9 @@ export const adminService = {
     /**
      * Reject Deposit
      */
-    async rejectDeposit(transactionId: string) {
+    async rejectDeposit(transactionId: string, reason?: string) {
         const { data, error } = await supabaseAdmin
-            .rpc('reject_deposit', { p_transaction_id: transactionId });
+            .rpc('reject_deposit', { p_transaction_id: transactionId, p_reason: reason ?? null });
 
         if (error) throw error;
         return data;
@@ -218,15 +229,136 @@ export const adminService = {
     /**
      * Reject Withdrawal (refunds balance)
      */
-    async rejectWithdrawal(withdrawalId: string) {
+    async rejectWithdrawal(withdrawalId: string, reason?: string) {
         const { data, error } = await supabaseAdmin
-            .rpc('reject_withdrawal', { p_withdrawal_id: withdrawalId });
+            .rpc('reject_withdrawal', { p_withdrawal_id: withdrawalId, p_reason: reason ?? null });
 
         if (error) throw error;
         if (data && typeof data === 'object' && data.success === false) {
             throw new Error(data.error || 'Failed to reject withdrawal');
         }
         return data;
-    }
+    },
+
+    /**
+     * Get giveaways with claimed prizes (for dispute management)
+     */
+    async getClaimedGiveaways() {
+        const { data, error } = await supabaseAdmin
+            .from('giveaways')
+            .select(`
+                id, title, prize_amount, prize_currency, status,
+                prize_claimed_at, winner_id, host_id,
+                winner:profiles!winner_id ( id, email, username, display_name ),
+                host:profiles!host_id ( id, email, username, display_name )
+            `)
+            .eq('status', 'ended')
+            .not('prize_claimed_at', 'is', null)
+            .order('prize_claimed_at', { ascending: false })
+            .limit(50);
+
+        if (error) throw error;
+        return data;
+    },
+
+    /**
+     * Admin refund: reverse a claimed prize back to host's wallet.
+     * Debits winner wallet, credits host wallet, clears prize claim state.
+     */
+    async refundPrizeClaim(giveawayId: string, reason: string) {
+        const { data: giveaway, error: giveawayError } = await supabaseAdmin
+            .from('giveaways')
+            .select('id, title, prize_amount, prize_currency, winner_id, host_id, prize_claimed_at')
+            .eq('id', giveawayId)
+            .single();
+
+        if (giveawayError || !giveaway) throw new Error('Giveaway not found');
+        if (!giveaway.prize_claimed_at) throw new Error('Prize has not been claimed — nothing to refund');
+        if (!giveaway.winner_id) throw new Error('No winner on record');
+
+        const prizeAmount = Number(giveaway.prize_amount);
+
+        // Fetch winner wallet
+        const { data: winnerWallet, error: wwError } = await supabaseAdmin
+            .from('wallets')
+            .select('id, balance')
+            .eq('user_id', giveaway.winner_id)
+            .single();
+
+        if (wwError || !winnerWallet) throw new Error('Winner wallet not found');
+        if (Number(winnerWallet.balance) < prizeAmount) {
+            throw new Error(`Insufficient winner balance: ₦${winnerWallet.balance} < ₦${prizeAmount}`);
+        }
+
+        // Debit winner
+        const winnerBalanceBefore = Number(winnerWallet.balance);
+        const winnerBalanceAfter = winnerBalanceBefore - prizeAmount;
+
+        const { error: debitTxError } = await supabaseAdmin
+            .from('wallet_transactions')
+            .insert({
+                wallet_id: winnerWallet.id,
+                user_id: giveaway.winner_id,
+                type: 'prize_refund',
+                amount: prizeAmount,
+                fee: 0,
+                net_amount: prizeAmount,
+                balance_before: winnerBalanceBefore,
+                balance_after: winnerBalanceAfter,
+                status: 'completed',
+                reference_type: 'giveaway',
+                reference_id: giveawayId,
+                description: `Admin prize refund: ${reason}`,
+            });
+        if (debitTxError) throw debitTxError;
+
+        const { error: debitWalletError } = await supabaseAdmin
+            .from('wallets')
+            .update({ balance: winnerBalanceAfter })
+            .eq('id', winnerWallet.id);
+        if (debitWalletError) throw debitWalletError;
+
+        // Credit host wallet
+        const { data: hostWallet, error: hwError } = await supabaseAdmin
+            .from('wallets')
+            .select('id, balance')
+            .eq('user_id', giveaway.host_id)
+            .single();
+
+        if (!hwError && hostWallet) {
+            const hostBalanceBefore = Number(hostWallet.balance);
+            const hostBalanceAfter = hostBalanceBefore + prizeAmount;
+
+            await supabaseAdmin.from('wallet_transactions').insert({
+                wallet_id: hostWallet.id,
+                user_id: giveaway.host_id,
+                type: 'prize_release',
+                amount: prizeAmount,
+                fee: 0,
+                net_amount: prizeAmount,
+                balance_before: hostBalanceBefore,
+                balance_after: hostBalanceAfter,
+                status: 'completed',
+                reference_type: 'giveaway',
+                reference_id: giveawayId,
+                description: `Prize refunded by admin: ${reason}`,
+            });
+
+            await supabaseAdmin
+                .from('wallets')
+                .update({ balance: hostBalanceAfter })
+                .eq('id', hostWallet.id);
+        }
+
+        // Clear prize claim on giveaway
+        const { error: clearError } = await supabaseAdmin
+            .from('giveaways')
+            .update({ prize_claimed_at: null })
+            .eq('id', giveawayId);
+        if (clearError) throw clearError;
+
+        return { success: true, prizeAmount };
+    },
 
 };
+

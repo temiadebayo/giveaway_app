@@ -45,14 +45,37 @@ export interface WithdrawalRequest {
     created_at: string;
 }
 
-// Fee configuration
+/**
+ * Fee configuration — display values.
+ *
+ * The authoritative schedule lives in the database (`get_fee_schedule()`), and
+ * request_withdrawal() derives the fee from it server-side. These constants exist only
+ * so the UI can render a quote without a round-trip; they must be kept in step with the
+ * SQL. `npm test` asserts they match.
+ *
+ * Previously this object also declared WITHDRAWAL_VAT_PERCENT (7.5) and
+ * WITHDRAWAL_COMMISSION_PERCENT (3), which were never applied anywhere — not in the UI,
+ * not in the RPC. They are removed rather than left to imply a charge that does not exist.
+ * DEPOSIT_FEE_PERCENT is 0 for the same reason: the deposit path never charged the 5%
+ * the /fees page advertised.
+ */
 export const FEES = {
-    DEPOSIT_FEE_PERCENT: 5,
+    DEPOSIT_FEE_PERCENT: 0,
     WITHDRAWAL_FEE_PERCENT: 5,
-    WITHDRAWAL_VAT_PERCENT: 7.5,
-    WITHDRAWAL_COMMISSION_PERCENT: 3,
     WITHDRAWAL_HOLD_HOURS: 48,
+    MAX_DEPOSIT: 5_000_000,
+    MAX_WITHDRAWAL: 500_000,
     DEFAULT_CURRENCY: 'NGN',
+};
+
+/**
+ * Withdrawal hold/cooldown by trust tier, mirroring withdrawal_cooldown_hours() in SQL.
+ */
+export const WITHDRAWAL_COOLDOWN_HOURS: Record<string, number> = {
+    bronze: 48,
+    silver: 48,
+    gold: 24,
+    diamond: 6,
 };
 
 // Bank details for deposits
@@ -96,58 +119,22 @@ class WalletService {
     }
 
     /**
-     * Create wallet for current user
+     * Create the current user's wallet if it does not exist yet.
+     *
+     * Goes through ensure_wallet(), which also backfills a missing profile row in the
+     * same transaction. The previous version INSERTed into wallets from the browser —
+     * with the blanket INSERT grant that was in place, a new user could have opened
+     * their account with a balance of their choosing.
      */
     async createWallet(): Promise<Wallet | null> {
-        const { data: { user } } = await this.supabase.auth.getUser();
-        if (!user) return null;
-
-        let { data, error } = await this.supabase
-            .from('wallets')
-            .insert({ user_id: user.id })
-            .select()
-            .single();
-
-        // 23503 = foreign_key_violation (missing profile row)
-        if (error && error.code === '23503') {
-            console.warn('Profile row missing for wallet creation. Creating fallback profile...');
-
-            // 1. Create the missing profile
-            const username = user.user_metadata?.username || user.email?.split('@')[0] || `user_${user.id.substring(0, 8)}`;
-            const displayName = user.user_metadata?.full_name || user.user_metadata?.name || username;
-
-            const { error: profileError } = await this.supabase
-                .from('profiles')
-                .insert({
-                    id: user.id,
-                    email: user.email,
-                    username: username,
-                    display_name: displayName,
-                    avatar_url: user.user_metadata?.avatar_url
-                });
-
-            if (profileError) {
-                console.error('Failed to create fallback profile:', profileError);
-                return null;
-            }
-
-            // 2. Retry creating the wallet now that profile exists
-            const retryRes = await this.supabase
-                .from('wallets')
-                .insert({ user_id: user.id })
-                .select()
-                .single();
-
-            data = retryRes.data;
-            error = retryRes.error;
-        }
+        const { data, error } = await this.supabase.rpc('ensure_wallet');
 
         if (error) {
-            console.error('Error creating wallet:', error.message, error.code, error.details);
+            console.error('Error creating wallet:', error.message);
             return null;
         }
 
-        return data;
+        return data as Wallet;
     }
 
     /**
@@ -194,22 +181,26 @@ class WalletService {
     }
 
     /**
-     * Request a withdrawal
+     * Request a withdrawal.
+     *
+     * The fee percentage and hold period are NOT sent. They used to be RPC arguments,
+     * which meant anyone could call the endpoint with
+     * `{p_fee_percentage: 0, p_hold_hours: 0}` and withdraw with no fee and no
+     * anti-fraud hold. The database now derives both from the caller's trust tier.
      */
     async requestWithdrawal(amount: number, payoutDetails?: { bank_name: string; account_name: string; account_number: string }): Promise<{
         success: boolean;
         withdrawal_id?: string;
         net_amount?: number;
         fee?: number;
+        fee_percentage?: number;
         hold_until?: string;
         error?: string;
     }> {
         const { data, error } = await this.supabase
             .rpc('request_withdrawal', {
                 p_amount: amount,
-                p_fee_percentage: WITHDRAWAL_FEE_PERCENT,
-                p_hold_hours: WITHDRAWAL_HOLD_HOURS,
-                p_payout_details: payoutDetails ? JSON.stringify(payoutDetails) : null
+                p_payout_details: payoutDetails ?? null
             });
 
         if (error) {
@@ -236,7 +227,7 @@ class WalletService {
         title: string;
         description?: string;
         prize_amount: number;
-        game_type?: 'tap' | 'quiz' | 'spin';
+        game_type?: 'tap';
         duration_seconds?: number;
         min_trust_tier?: 'bronze' | 'silver' | 'gold' | 'diamond';
         max_participants?: number;

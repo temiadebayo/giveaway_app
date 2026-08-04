@@ -62,13 +62,11 @@ export default function WalletPage() {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
 
-        // Fetch username, bank details, and KYC status
+        // Fetch username, bank details, and KYC status.
+        // Bank details and id_verified are column-revoked from `authenticated`;
+        // get_my_profile() returns the caller's own row in full.
         if (user) {
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('username, bank_name, account_name, account_number, id_verified')
-                .eq('id', user.id)
-                .single();
+            const { data: profile } = await supabase.rpc('get_my_profile');
             if (profile?.username) setUsername(profile.username);
             
             if (profile?.id_verified) {

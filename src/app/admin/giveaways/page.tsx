@@ -7,6 +7,12 @@ export default async function AdminGiveawaysPage() {
 
     async function forceEndGiveaway(formData: FormData) {
         "use server";
+        // Server actions are invocable POST endpoints in their own right — being defined
+        // inside an admin page does not authorize them. The admin layout gates the page,
+        // not this function.
+        const { getCurrentAdmin } = await import('@/lib/admin-auth');
+        if (!(await getCurrentAdmin())) return;
+
         const id = formData.get('id') as string;
         await adminService.endGiveaway(id);
         revalidatePath('/admin/giveaways');

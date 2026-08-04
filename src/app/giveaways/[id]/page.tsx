@@ -16,6 +16,8 @@ import { createClient } from "@/lib/supabase";
 import { TapGameState } from "@/lib/tap-game-engine";
 import { TIER_BENEFITS, TrustTier } from "@/lib/trust-engine";
 import { useFingerprint } from "@/hooks/use-fingerprint";
+import { getGuestSessionId } from "@/lib/guest-session";
+import { fps } from "@/lib/fps";
 import { AppHeader } from "@/components/app-header";
 import { Breadcrumbs } from "@/components/breadcrumbs";
 import ZackMascot from "@/assets/Zack_GA_Mascot_1.svg";
@@ -73,6 +75,14 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
     const [guestName, setGuestName] = useState("");
     const [showNameInput, setShowNameInput] = useState(false);
 
+    // Identifies this browser's guest session on the leaderboard. Set when the guest
+    // joins; the matching secret (the token) never leaves guest-session.ts.
+    const [guestSessionId, setGuestSessionId] = useState<string | null>(null);
+
+    useEffect(() => {
+        setGuestSessionId(getGuestSessionId());
+    }, [guestParticipation]);
+
     // Initialize random guest name
     useEffect(() => {
         setGuestName(generateRandomUsername());
@@ -95,6 +105,11 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
     // Prize claiming state
     const [isClaiming, setIsClaiming] = useState(false);
     const [prizeClaimed, setPrizeClaimed] = useState(false);
+
+    // Guest email capture
+    const [guestEmail, setGuestEmail] = useState("");
+    const [emailSubmitted, setEmailSubmitted] = useState(false);
+
 
     // Lobby state
     const [lobbyParticipants, setLobbyParticipants] = useState<Participant[]>([]);
@@ -168,7 +183,11 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
         const leaderboardData = await giveawayService.getCombinedLeaderboard(id);
         setLeaderboard(leaderboardData);
         setLoading(false);
-    }, [id, fingerprintId]);
+
+        if (giveawayData) {
+            fps.giveawayViewed(id, giveawayData.prize_amount, fingerprintId);
+        }
+    }, [id, fingerprintId]); // eslint-disable-line react-hooks/exhaustive-deps
 
     useEffect(() => {
         loadData();
@@ -310,9 +329,9 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
         setJoining(true);
         const result = await giveawayService.joinGiveaway(id);
         if (result.success) {
+            fps.giveawayJoined(id, false);
             const participationData = await giveawayService.getParticipation(id);
             setParticipation(participationData);
-            // Refresh lobby participants
             const lobbyData = await giveawayService.getLobbyParticipants(id);
             setLobbyParticipants(lobbyData);
         }
@@ -327,6 +346,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
         const nameToUse = guestName || generateRandomUsername();
         const result = await giveawayService.joinAsGuest(id, fingerprintId, nameToUse);
         if (result.success) {
+            fps.giveawayJoined(id, true, fingerprintId);
             const guestData = await giveawayService.getGuestParticipation(id, fingerprintId);
             setGuestParticipation(guestData);
             setShowNameInput(false);
@@ -370,24 +390,35 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
         }, 1000);
     };
 
-    const handleGameEnd = useCallback(async (state: TapGameState) => {
+    const handleGameEnd = useCallback(async (state: TapGameState, tapOffsets: number[]) => {
         if (submittingRef.current) return;
         submittingRef.current = true;
 
         setPhase('submitted');
+        // Optimistic: shown immediately so the round feels responsive. Replaced below
+        // with the server's authoritative figure, which is the one that counts.
         setFinalScore(state.score);
 
         try {
-            if (isGuest && fingerprintId) {
-                // Submit as guest
-                await giveawayService.submitGuestScore(id, fingerprintId, state.score, state.taps, state.bestStreak);
-                const guestData = await giveawayService.getGuestParticipation(id, fingerprintId);
-                setGuestParticipation(guestData);
+            fps.gameCompleted(id, state.score, isGuest, fingerprintId);
+            fps.scoreSubmitted(id, state.score, state.taps, isGuest, fingerprintId);
+
+            // Tap timings are submitted, not a score. The server replays them through
+            // the same rules the engine used and returns the score it derives.
+            const result = isGuest
+                ? await giveawayService.submitGuestScore(id, tapOffsets, state.score)
+                : await giveawayService.submitScore(id, tapOffsets, state.score);
+
+            if (result.success && typeof result.score === 'number') {
+                setFinalScore(result.score);
+            } else if (!result.success) {
+                console.error("Score submission rejected:", result.error);
+            }
+
+            if (isGuest) {
+                setGuestParticipation(await giveawayService.getGuestParticipation(id));
             } else {
-                // Submit as authenticated user
-                await giveawayService.submitScore(id, state.score, state.taps, state.bestStreak);
-                const participationData = await giveawayService.getParticipation(id);
-                setParticipation(participationData);
+                setParticipation(await giveawayService.getParticipation(id));
             }
 
             const leaderboardData = await giveawayService.getCombinedLeaderboard(id);
@@ -407,6 +438,7 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
         try {
             const result = await giveawayService.claimPrize(id);
             if (result.success) {
+                fps.prizeClaimed(id, giveaway.prize_amount);
                 setPrizeClaimed(true);
                 // Trigger celebratory confetti again
                 confetti({
@@ -487,18 +519,33 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
     const hasCompleted = participation?.completed_at || guestParticipation?.completed_at;
     const currentScore = participation?.score || guestParticipation?.score || 0;
 
-    // Winner check
+    // Winner check.
+    // Guests are matched on their guest session id, not their fingerprint. The
+    // fingerprint used to be published on the giveaway row, which let anyone read a
+    // guest winner's identity and claim the prize by presenting it.
     const winner = leaderboard.find(p => p.is_winner);
-    // Updated isWinner check to include guest fingerprint match
     const isWinner = (currentUserId && giveaway?.winner_id === currentUserId) ||
-        (fingerprintId && giveaway?.winner_fingerprint_id === fingerprintId);
+        (guestSessionId && giveaway?.winner_guest_session_id === guestSessionId);
 
     // Check if prize has already been claimed (via timestamp or local state)
     const isPrizeClaimed = giveaway?.prize_claimed_at || prizeClaimed;
     const myRank = leaderboard.findIndex(p =>
         (currentUserId && p.user_id === currentUserId) ||
-        (fingerprintId && p.fingerprint_id === fingerprintId)
+        (guestSessionId && p.guest_session_id === guestSessionId)
     ) + 1;
+
+    // Analytics: prize won + guest signup prompt
+    useEffect(() => {
+        if (phase === 'ended' && isWinner && giveaway) {
+            fps.prizeWon(id, giveaway.prize_amount, isGuest, fingerprintId);
+        }
+    }, [phase, isWinner]); // eslint-disable-line react-hooks/exhaustive-deps
+
+    useEffect(() => {
+        if (phase === 'waiting' && isGuest) {
+            fps.guestSignupPrompted('waiting', fingerprintId);
+        }
+    }, [phase, isGuest]); // eslint-disable-line react-hooks/exhaustive-deps
 
     // Confetti for winners
     useEffect(() => {
@@ -1241,6 +1288,8 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                         duration={giveaway.game_duration_seconds}
                                         onGameEnd={handleGameEnd}
                                         autoStart
+                                        giveawayId={id}
+                                        fingerprintId={fingerprintId}
                                     />
                                 </motion.div>
                             )}
@@ -1295,18 +1344,41 @@ export default function GiveawayDetailPage({ params }: GiveawayPageProps) {
                                         </p>
                                     )}
 
-                                    {/* Guest signup reminder */}
+                                    {/* Guest email capture */}
                                     {isGuest && (
                                         <div className="mt-6 p-4 rounded-xl bg-yellow-500/10 border border-yellow-500/30">
-                                            <p className="text-yellow-400 font-medium mb-2">
+                                            <p className="text-yellow-400 font-medium mb-1">
                                                 Sign up to claim your prize if you win! 🏆
                                             </p>
-                                            <Link href="/login">
-                                                <Button size="sm" className="bg-yellow-500 hover:bg-yellow-600 text-black">
-                                                    <LogIn className="w-4 h-4 mr-2" />
-                                                    Create Account
-                                                </Button>
-                                            </Link>
+                                            {emailSubmitted ? (
+                                                <p className="text-sm text-green-400 mt-2">
+                                                    Got it! Create your account to lock in your winnings.
+                                                </p>
+                                            ) : (
+                                                <div className="mt-3 flex flex-col sm:flex-row gap-2">
+                                                    <Input
+                                                        type="email"
+                                                        value={guestEmail}
+                                                        onChange={(e) => setGuestEmail(e.target.value)}
+                                                        placeholder="Enter your email"
+                                                        className="flex-1 bg-black/30 border-yellow-500/30 text-sm"
+                                                    />
+                                                    <Link
+                                                        href={`/login?email=${encodeURIComponent(guestEmail)}&redirect=/giveaways/${id}`}
+                                                        onClick={() => {
+                                                            if (guestEmail) {
+                                                                fps.guestEmailCaptured(fingerprintId);
+                                                                setEmailSubmitted(true);
+                                                            }
+                                                        }}
+                                                    >
+                                                        <Button size="sm" className="bg-yellow-500 hover:bg-yellow-600 text-black whitespace-nowrap w-full sm:w-auto">
+                                                            <LogIn className="w-4 h-4 mr-2" />
+                                                            Sign Up
+                                                        </Button>
+                                                    </Link>
+                                                </div>
+                                            )}
                                         </div>
                                     )}
                                 </motion.div>

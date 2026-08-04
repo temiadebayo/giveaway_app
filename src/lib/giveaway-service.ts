@@ -6,6 +6,7 @@
 
 import { createClient } from '@/lib/supabase';
 import { TrustTier } from '@/lib/trust-engine';
+import { getGuestToken, persistGuestSession, clearGuestSession } from '@/lib/guest-session';
 
 export interface Giveaway {
     id: string;
@@ -27,7 +28,7 @@ export interface Giveaway {
     scheduled_start_at: string | null;
     allow_sharing: boolean;
     winner_id: string | null;
-    winner_fingerprint_id: string | null;
+    winner_guest_session_id: string | null;
     winning_score: number | null;
     prize_claimed_at: string | null;
     created_at: string;
@@ -51,7 +52,7 @@ export interface Participant {
     joined_at: string;
     completed_at: string | null;
     is_winner: boolean;
-    fingerprint_id?: string;
+    guest_session_id?: string;
     // Joined fields
     user?: {
         username: string;
@@ -61,31 +62,11 @@ export interface Participant {
     };
 }
 
-// Security constants
-const MAX_TAPS_PER_SECOND = 25; // Humanly impossible to exceed
-const SCORE_MULTIPLIER_TOLERANCE = 8.0; // Allow significant variance for 5x multipliers + bonuses
+// Score validation lives in the submit_score() RPC now. It used to be enforced here,
+// in the browser, which meant it was enforced only against people who ran our code.
 
 class GiveawayService {
     private supabase = createClient();
-
-    /**
-     * Validate if score is humanly possible
-     */
-    private validateScore(score: number, taps: number, durationSeconds: number): { valid: boolean; reason?: string } {
-        // Max possible taps
-        const maxPossibleTaps = durationSeconds * MAX_TAPS_PER_SECOND;
-        if (taps > maxPossibleTaps) {
-            return { valid: false, reason: `Tap count ${taps} exceeds maximum possible (${maxPossibleTaps})` };
-        }
-
-        // Check if score is reasonable for tap count (with tolerance)
-        const maxPossibleScore = taps * 10 * SCORE_MULTIPLIER_TOLERANCE; // Assuming max 10 points per tap with bonuses
-        if (score > maxPossibleScore) {
-            return { valid: false, reason: `Score ${score} is too high for ${taps} taps` };
-        }
-
-        return { valid: true };
-    }
 
     /**
      * Get all active giveaways
@@ -222,7 +203,14 @@ class GiveawayService {
     }
 
     /**
-     * Join a giveaway
+     * Join a giveaway.
+     *
+     * All eligibility rules now live in the join_giveaway() RPC. They used to be run
+     * here in TypeScript and then written with a plain INSERT, so calling PostgREST
+     * directly skipped every one of them. Two were also broken as written:
+     *   - the previous-winner cooldown used .filter('giveaways.host_id', ...) against a
+     *     query with no embedded join, which PostgREST does not evaluate as intended
+     *   - min_trust_tier and max_participants were stored but never checked anywhere
      */
     async joinGiveaway(giveawayId: string, fingerprintId?: string): Promise<{ success: boolean; error?: string }> {
         const { data: { user } } = await this.supabase.auth.getUser();
@@ -230,64 +218,18 @@ class GiveawayService {
             return { success: false, error: 'Not authenticated' };
         }
 
-        // SECURITY FIX #1: Host cannot join their own giveaway & Cooldown check
-        const { data: giveaway } = await this.supabase
-            .from('giveaways')
-            .select('host_id, prevent_previous_winners_hours')
-            .eq('id', giveawayId)
-            .single();
-
-        if (giveaway?.host_id === user.id) {
-            return { success: false, error: 'Hosts cannot participate in their own giveaways' };
-        }
-
-        // COOLDOWN CHECK: Prevent recent winners of this host from joining
-        if (giveaway?.prevent_previous_winners_hours && giveaway.prevent_previous_winners_hours > 0) {
-            const timeThreshold = new Date(Date.now() - giveaway.prevent_previous_winners_hours * 60 * 60 * 1000).toISOString();
-
-            const { data: recentWins } = await this.supabase
-                .from('giveaway_participants')
-                .select('id')
-                .eq('user_id', user.id)
-                .eq('is_winner', true)
-                .gte('completed_at', timeThreshold)
-                // We need to join with giveaways to verify it's the SAME host
-                .not('giveaways', 'is', null)
-                .filter('giveaways.host_id', 'eq', giveaway.host_id)
-                .limit(1);
-
-            if (recentWins && recentWins.length > 0) {
-                return {
-                    success: false,
-                    error: `You recently won an event from this host. Please wait ${giveaway.prevent_previous_winners_hours} hours from your win before joining their new events.`
-                };
-            }
-        }
-
-        // Check if already joined
-        const { data: existing } = await this.supabase
-            .from('giveaway_participants')
-            .select('id')
-            .eq('giveaway_id', giveawayId)
-            .eq('user_id', user.id)
-            .single();
-
-        if (existing) {
-            return { success: true }; // Already joined
-        }
-
-        // Join the giveaway
-        const { error } = await this.supabase
-            .from('giveaway_participants')
-            .insert({
-                giveaway_id: giveawayId,
-                user_id: user.id,
-                device_fingerprint_id: fingerprintId || null,
-            });
+        const { data, error } = await this.supabase.rpc('join_giveaway', {
+            p_giveaway_id: giveawayId,
+            p_fingerprint: fingerprintId ?? null,
+        });
 
         if (error) {
             console.error('Error joining giveaway:', error);
             return { success: false, error: error.message };
+        }
+
+        if (!data?.success) {
+            return { success: false, error: data?.error || 'Unable to join this giveaway' };
         }
 
         // Force a realtime broadcast to the lobby channel so the Host sees it immediately
@@ -337,61 +279,43 @@ class GiveawayService {
     /**
      * Submit game score
      */
+    /**
+     * Submit a completed round.
+     *
+     * Sends the tap TIMINGS, not a score. The server replays them through the same
+     * scoring rules as the client engine and returns the authoritative figure, which is
+     * what gets stored and displayed.
+     *
+     * `clientScore` is sent only so the server can compare and flag a discrepancy — a
+     * tampered page now announces itself rather than succeeding quietly.
+     */
     async submitScore(
         giveawayId: string,
-        score: number,
-        taps: number,
-        bestStreak: number
-    ): Promise<{ success: boolean; rank?: number; error?: string }> {
-        const { data: { user } } = await this.supabase.auth.getUser();
-        if (!user) {
-            return { success: false, error: 'Not authenticated' };
-        }
-
-        // SECURITY FIX #3: Check if already submitted
-        const { data: existing } = await this.supabase
-            .from('giveaway_participants')
-            .select('completed_at')
-            .eq('giveaway_id', giveawayId)
-            .eq('user_id', user.id)
-            .single();
-
-        if (existing?.completed_at) {
-            return { success: false, error: 'Score already submitted' };
-        }
-
-        // SECURITY FIX #2: Validate score is humanly possible
-        const { data: giveaway } = await this.supabase
-            .from('giveaways')
-            .select('game_duration_seconds')
-            .eq('id', giveawayId)
-            .single();
-
-        const validation = this.validateScore(score, taps, giveaway?.game_duration_seconds || 30);
-        if (!validation.valid) {
-            console.warn(`Suspicious score rejected: ${validation.reason}`);
-            return { success: false, error: 'Invalid score detected' };
-        }
-
-        const { data, error } = await this.supabase
-            .from('giveaway_participants')
-            .update({
-                score,
-                taps,
-                best_streak: bestStreak,
-                completed_at: new Date().toISOString(),
-            })
-            .eq('giveaway_id', giveawayId)
-            .eq('user_id', user.id)
-            .select('rank')
-            .single();
+        tapOffsets: number[],
+        clientScore?: number
+    ): Promise<{ success: boolean; score?: number; taps?: number; bestStreak?: number; rank?: number; error?: string }> {
+        const { data, error } = await this.supabase.rpc('submit_score', {
+            p_giveaway_id: giveawayId,
+            p_tap_offsets: tapOffsets,
+            p_client_score: clientScore ?? null,
+        });
 
         if (error) {
             console.error('Error submitting score:', error);
             return { success: false, error: error.message };
         }
 
-        return { success: true, rank: data?.rank };
+        if (!data?.success) {
+            return { success: false, error: data?.error || 'Score rejected' };
+        }
+
+        return {
+            success: true,
+            score: data.score,
+            taps: data.taps,
+            bestStreak: data.best_streak,
+            rank: data.rank,
+        };
     }
 
     /**
@@ -535,99 +459,53 @@ class GiveawayService {
     }
 
     /**
-     * End a giveaway and pick winner
+     * End a giveaway and pick the winner.
+     *
+     * Repointed from finalize_giveaway() to complete_giveaway(). The two were duplicate
+     * implementations of the same operation that had drifted apart — finalize_giveaway
+     * ignored guest participants entirely, so a guest could win a round and the winner
+     * would still be recorded as the top authenticated player. finalize_giveaway is
+     * dropped in the Phase 0 migrations.
      */
     async endGiveaway(giveawayId: string): Promise<{ success: boolean; winner?: any; error?: string }> {
         const { data, error } = await this.supabase
-            .rpc('finalize_giveaway', { giveaway_uuid: giveawayId });
+            .rpc('complete_giveaway', { p_giveaway_id: giveawayId });
 
         if (error) {
             return { success: false, error: error.message };
         }
 
-        return { success: data.success, winner: data };
+        if (!data?.success) {
+            return { success: false, error: data?.error };
+        }
+
+        return { success: true, winner: data };
     }
 
     /**
-     * SECURITY FIX #4: Cancel a giveaway and refund escrow
+     * Cancel a giveaway and refund the escrow to the host.
+     *
+     * This used to be six sequential round-trips from the browser, including a
+     * read-modify-write on the wallet balance. A failure part-way through left the
+     * escrow released but the giveaway still open, and two concurrent calls could
+     * refund twice. cancel_giveaway() does the whole thing in one transaction with
+     * row locks. It also refuses to cancel a giveaway that is already live.
      */
-    async cancelGiveaway(giveawayId: string): Promise<{ success: boolean; error?: string }> {
-        const { data: { user } } = await this.supabase.auth.getUser();
-        if (!user) {
-            return { success: false, error: 'Not authenticated' };
-        }
-
-        // Verify ownership and status
-        const { data: giveaway } = await this.supabase
-            .from('giveaways')
-            .select('host_id, status, prize_amount')
-            .eq('id', giveawayId)
-            .single();
-
-        if (!giveaway) {
-            return { success: false, error: 'Giveaway not found' };
-        }
-
-        if (giveaway.host_id !== user.id) {
-            return { success: false, error: 'Only the host can cancel a giveaway' };
-        }
-
-        if (giveaway.status === 'ended') {
-            return { success: false, error: 'Cannot cancel an ended giveaway' };
-        }
-
-        // Refund escrow to wallet
-        const { data: escrow } = await this.supabase
-            .from('escrow')
-            .select('id, amount')
-            .eq('giveaway_id', giveawayId)
-            .eq('status', 'held')
-            .single();
-
-        if (escrow) {
-            // Release escrow back to host wallet
-            const { data: wallet } = await this.supabase
-                .from('wallets')
-                .select('id, balance')
-                .eq('user_id', user.id)
-                .single();
-
-            if (wallet) {
-                await this.supabase
-                    .from('wallets')
-                    .update({ balance: wallet.balance + escrow.amount })
-                    .eq('id', wallet.id);
-
-                await this.supabase
-                    .from('escrow')
-                    .update({ status: 'refunded', released_at: new Date().toISOString() })
-                    .eq('id', escrow.id);
-
-                // Record refund transaction
-                await this.supabase
-                    .from('wallet_transactions')
-                    .insert({
-                        wallet_id: wallet.id,
-                        type: 'escrow_refund',
-                        amount: escrow.amount,
-                        description: 'Giveaway cancelled - escrow refund',
-                        status: 'completed',
-                        reference_id: giveawayId,
-                    });
-            }
-        }
-
-        // Update giveaway status
-        const { error } = await this.supabase
-            .from('giveaways')
-            .update({ status: 'cancelled', updated_at: new Date().toISOString() })
-            .eq('id', giveawayId);
+    async cancelGiveaway(giveawayId: string): Promise<{ success: boolean; refunded?: number; error?: string }> {
+        const { data, error } = await this.supabase.rpc('cancel_giveaway', {
+            p_giveaway_id: giveawayId,
+        });
 
         if (error) {
+            console.error('Error cancelling giveaway:', error);
             return { success: false, error: error.message };
         }
 
-        return { success: true };
+        if (!data?.success) {
+            return { success: false, error: data?.error || 'Unable to cancel this giveaway' };
+        }
+
+        return { success: true, refunded: data.refunded };
     }
 
     // ============================================
@@ -642,7 +520,12 @@ class GiveawayService {
             const response = await fetch(`/api/giveaways/${giveawayId}/guest-join`, {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fingerprintId, guestName: guestName || null }),
+                body: JSON.stringify({
+                    fingerprintId,
+                    guestName: guestName || null,
+                    // Sent so an existing guest keeps one session across multiple events.
+                    sessionToken: getGuestToken(),
+                }),
             });
 
             const data = await response.json();
@@ -651,6 +534,9 @@ class GiveawayService {
                 console.error('Error joining as guest:', data.error);
                 return { success: false, error: data.error };
             }
+
+            // The raw token comes back only on the response that minted it.
+            persistGuestSession(data);
 
             return { success: true };
         } catch (err) {
@@ -679,16 +565,21 @@ class GiveawayService {
      */
     async submitGuestScore(
         giveawayId: string,
-        fingerprintId: string,
-        score: number,
-        taps: number,
-        bestStreak: number
-    ): Promise<{ success: boolean; error?: string }> {
+        tapOffsets: number[],
+        clientScore?: number
+    ): Promise<{ success: boolean; score?: number; error?: string }> {
         try {
+            // Keyed on the session token, not the fingerprint: a fingerprint is public,
+            // so it must not be able to write anyone's score. Timings, not a score —
+            // the server derives the figure.
             const response = await fetch(`/api/giveaways/${giveawayId}/guest-join`, {
                 method: 'PUT',
                 headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({ fingerprintId, score, taps, bestStreak }),
+                body: JSON.stringify({
+                    sessionToken: getGuestToken(),
+                    tapOffsets,
+                    clientScore: clientScore ?? null,
+                }),
             });
 
             const data = await response.json();
@@ -698,7 +589,7 @@ class GiveawayService {
                 return { success: false, error: data.error };
             }
 
-            return { success: true };
+            return { success: true, score: data.score };
         } catch (err) {
             console.error('Error submitting guest score:', err);
             return { success: false, error: 'Failed to submit score' };
@@ -708,10 +599,13 @@ class GiveawayService {
     /**
      * Get guest participation by fingerprint (via server API)
      */
-    async getGuestParticipation(giveawayId: string, fingerprintId: string): Promise<GuestParticipant | null> {
+    async getGuestParticipation(giveawayId: string, _fingerprintId?: string): Promise<GuestParticipant | null> {
+        const token = getGuestToken();
+        if (!token) return null;
+
         try {
             const response = await fetch(
-                `/api/giveaways/${giveawayId}/guest-join?fingerprintId=${encodeURIComponent(fingerprintId)}`
+                `/api/giveaways/${giveawayId}/guest-join?sessionToken=${encodeURIComponent(token)}`
             );
             const data = await response.json();
             return data.participation || null;
@@ -722,18 +616,35 @@ class GiveawayService {
     }
 
     /**
-     * Link guest participations to user account
+     * Claim this browser's guest history into the signed-in account.
+     *
+     * Replaces linkGuestToUser(fingerprintId). The old RPC authorised on a fingerprint,
+     * which was published on the leaderboard — so anyone could claim a guest winner's
+     * prize by reading it. Authorisation is now the session token, which only ever
+     * existed in the guest's own browser.
      */
-    async linkGuestToUser(fingerprintId: string): Promise<{ success: boolean; linkedCount?: number; error?: string }> {
+    async claimGuestSession(): Promise<{ success: boolean; linkedCount?: number; error?: string }> {
+        const token = getGuestToken();
+        if (!token) {
+            return { success: false, error: 'No guest session on this device' };
+        }
+
         const { data, error } = await this.supabase
-            .rpc('link_guest_to_user', { p_fingerprint_id: fingerprintId });
+            .rpc('claim_guest_session', { p_token: token });
 
         if (error) {
-            console.error('Error linking guest to user:', error);
+            console.error('Error claiming guest session:', error);
             return { success: false, error: error.message };
         }
 
-        return { success: data.success, linkedCount: data.linked_count };
+        if (!data?.success) {
+            return { success: false, error: data?.error };
+        }
+
+        // The credential is spent; there is no reason to keep it around.
+        clearGuestSession();
+
+        return { success: true, linkedCount: data.linked_count };
     }
 
     /**
@@ -752,11 +663,13 @@ class GiveawayService {
             .limit(limit);
 
         if (!viewError && combined) {
-            // Map flat view structure to nested Participant structure
+            // Map flat view structure to nested Participant structure.
+            // Guests are keyed on guest_session_id — the view no longer exposes
+            // fingerprint_id, since publishing it is what allowed guest prize hijacking.
             return combined.map((row: any) => ({
                 id: row.participation_id,
                 giveaway_id: row.giveaway_id,
-                user_id: row.user_id || row.fingerprint_id, // Use fingerprint as fallback ID
+                user_id: row.user_id || row.guest_session_id,
                 score: row.score,
                 taps: row.taps,
                 best_streak: row.best_streak,
@@ -765,13 +678,13 @@ class GiveawayService {
                 completed_at: row.completed_at,
                 is_winner: row.is_winner,
                 user: {
-                    id: row.user_id || row.fingerprint_id,
+                    id: row.user_id || row.guest_session_id,
                     username: row.username,
                     display_name: row.display_name,
                     avatar_url: row.avatar_url,
                     trust_tier: row.trust_tier || 'bronze'
                 },
-                fingerprint_id: row.fingerprint_id // Keep for reference
+                guest_session_id: row.guest_session_id
             })) as Participant[];
         }
 
@@ -818,10 +731,12 @@ class GiveawayService {
             user: p.user,
         }));
 
-        // 2. Fetch guest participants
+        // 2. Fetch guest participants.
+        // Explicit column list: fingerprint_id and linked_user_id are column-revoked from
+        // clients, so select('*') would now fail.
         const { data: guestData, error: guestError } = await this.supabase
             .from('guest_participants')
-            .select('*')
+            .select('id, giveaway_id, guest_session_id, guest_name, score, taps, best_streak, joined_at, completed_at, is_winner')
             .eq('giveaway_id', giveawayId)
             .order('joined_at', { ascending: true });
 
@@ -832,7 +747,7 @@ class GiveawayService {
         const guestParticipants = (guestData || []).map((g: any) => ({
             id: g.id,
             giveaway_id: g.giveaway_id,
-            user_id: g.fingerprint_id,
+            user_id: g.guest_session_id,
             score: g.score || 0,
             taps: g.taps || 0,
             best_streak: g.best_streak || 0,
@@ -841,13 +756,13 @@ class GiveawayService {
             completed_at: g.completed_at,
             is_winner: g.is_winner || false,
             user: {
-                id: g.fingerprint_id,
+                id: g.guest_session_id,
                 username: g.guest_name || 'Guest',
                 display_name: g.guest_name || 'Guest',
                 avatar_url: null,
                 trust_tier: 'bronze'
             },
-            fingerprint_id: g.fingerprint_id,
+            guest_session_id: g.guest_session_id,
         }));
 
         // 3. Combine and sort by joined_at
@@ -943,7 +858,7 @@ class GiveawayService {
 export interface GuestParticipant {
     id: string;
     giveaway_id: string;
-    fingerprint_id: string;
+    guest_session_id: string;
     guest_name?: string;
     score: number;
     taps: number;

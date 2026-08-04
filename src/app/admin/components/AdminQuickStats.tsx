@@ -1,16 +1,37 @@
 "use client";
 
-import { useEffect, useState } from 'react';
+import { useEffect, useMemo } from 'react';
 import { Clock, ArrowDownLeft, ArrowUpRight, ArrowRight } from 'lucide-react';
 import { createClient } from '@/lib/supabase';
 import Link from 'next/link';
 import { useRouter } from 'next/navigation';
 
-export function AdminQuickStats({ initialDeposits, initialWithdrawals }: { initialDeposits: any[], initialWithdrawals: any[] }) {
-    const [deposits, setDeposits] = useState(initialDeposits);
-    const [withdrawals, setWithdrawals] = useState(initialWithdrawals);
+interface PendingRow {
+    id: string;
+    amount: number | null;
+    profiles?: { username?: string | null } | null;
+}
+
+/**
+ * Deposits and withdrawals are rendered straight from props.
+ *
+ * They were previously copied into local state and re-synced by a second effect that
+ * called setState during the effect — which triggers a cascading re-render on every
+ * parent update, and is what `react-hooks/set-state-in-effect` was flagging. The state
+ * served no purpose: router.refresh() re-runs the parent server component, which passes
+ * fresh props down anyway. Deriving directly from props is both correct and simpler.
+ */
+export function AdminQuickStats({
+    initialDeposits,
+    initialWithdrawals,
+}: {
+    initialDeposits: PendingRow[];
+    initialWithdrawals: PendingRow[];
+}) {
+    const deposits = initialDeposits;
+    const withdrawals = initialWithdrawals;
     const router = useRouter();
-    const supabase = createClient();
+    const supabase = useMemo(() => createClient(), []);
 
     useEffect(() => {
         // Subscribe to real-time changes for wallet transactions (deposits)
@@ -43,12 +64,6 @@ export function AdminQuickStats({ initialDeposits, initialWithdrawals }: { initi
             supabase.removeChannel(withdrawalSubscription);
         };
     }, [router, supabase]);
-
-    // Update local state when props change (from router.refresh())
-    useEffect(() => {
-        setDeposits(initialDeposits);
-        setWithdrawals(initialWithdrawals);
-    }, [initialDeposits, initialWithdrawals]);
 
     return (
         <div className="grid lg:grid-cols-2 gap-8 mt-8">

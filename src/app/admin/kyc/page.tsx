@@ -54,30 +54,25 @@ export default function AdminKycPage() {
 
     const fetchPendingRequests = async () => {
         setLoading(true);
-        // Using an explicit inner join strategy to fetch the profile info along with the request
-        const { data, error } = await supabase
-            .from('kyc_requests')
-            .select(`
-                *,
-                profiles (
-                    username,
-                    display_name,
-                    email,
-                    trust_tier,
-                    trust_score
-                )
-            `)
-            .eq('status', 'pending')
-            .order('created_at', { ascending: true });
 
-        if (error) {
-            console.error("Error fetching KYC requests:", error);
-            setLoading(false);
-            return;
+        try {
+            // Use server-side API route to fetch pending requests (bypasses RLS)
+            const res = await fetch('/api/admin/kyc');
+            const json = await res.json();
+
+            if (!res.ok) {
+                console.error("Error fetching KYC requests:", json.error);
+                setLoading(false);
+                return;
+            }
+
+            const data = json.data || [];
+            setRequests(data as KycRequest[]);
+            generateSignedUrls(data as KycRequest[]);
+        } catch (err) {
+            console.error("Error fetching KYC requests:", err);
         }
 
-        setRequests(data as any);
-        generateSignedUrls(data as KycRequest[]);
         setLoading(false);
     };
 
@@ -91,19 +86,23 @@ export default function AdminKycPage() {
 
         setProcessingId(requestId);
 
-        // Call the secure RPC
-        const { data, error } = await supabase.rpc('approve_kyc_request', {
-            p_request_id: requestId
-        });
+        try {
+            const res = await fetch('/api/admin/kyc', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'approve', requestId }),
+            });
 
-        // Supabase RPC returns typed JSONB. `error` is for network failures, `data` contains our logic result
-        if (error) {
-            alert(`Network Error: ${error.message}`);
-        } else if (data && typeof data === 'object' && !(data as any).success) {
-            alert(`Approval Failed: ${(data as any).error || 'Unknown error'}`);
-        } else {
-            // Remove from local state only on true success
-            setRequests(prev => prev.filter(r => r.id !== requestId));
+            const json = await res.json();
+
+            if (!res.ok || !json.success) {
+                alert(`Approval Failed: ${json.error || 'Unknown error'}`);
+            } else {
+                // Remove from local state on success
+                setRequests(prev => prev.filter(r => r.id !== requestId));
+            }
+        } catch (err: any) {
+            alert(`Network Error: ${err.message}`);
         }
 
         setProcessingId(null);
@@ -115,17 +114,22 @@ export default function AdminKycPage() {
 
         setProcessingId(requestId);
 
-        const { data, error } = await supabase.rpc('reject_kyc_request', {
-            p_request_id: requestId,
-            p_reason: reason
-        });
+        try {
+            const res = await fetch('/api/admin/kyc', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ action: 'reject', requestId, reason }),
+            });
 
-        if (error) {
-            alert(`Network Error: ${error.message}`);
-        } else if (data && typeof data === 'object' && !(data as any).success) {
-            alert(`Rejection Failed: ${(data as any).error || 'Unknown error'}`);
-        } else {
-            setRequests(prev => prev.filter(r => r.id !== requestId));
+            const json = await res.json();
+
+            if (!res.ok || !json.success) {
+                alert(`Rejection Failed: ${json.error || 'Unknown error'}`);
+            } else {
+                setRequests(prev => prev.filter(r => r.id !== requestId));
+            }
+        } catch (err: any) {
+            alert(`Network Error: ${err.message}`);
         }
 
         setProcessingId(null);

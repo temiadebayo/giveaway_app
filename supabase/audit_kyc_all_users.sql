@@ -26,5 +26,5 @@ FROM
     public.profiles p
 WHERE 
     p.email IS NOT NULL
-ORDER BY 
+ORDER BY        
     p.updated_at DESC;

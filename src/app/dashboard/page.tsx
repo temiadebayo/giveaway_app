@@ -25,6 +25,7 @@ import {
 } from "lucide-react";
 import type { User } from "@supabase/supabase-js";
 import { ProfileCompletionBanner } from "@/components/profile-completion-banner";
+import { GuestSessionClaimer } from "@/components/guest-session-claimer";
 import { TrustTierBadge } from "@/components/trust/trust-components";
 import FredMascot from "@/assets/Fred_GA_Mascot.svg";
 import NatMascot from "@/assets/Nat_GA_Mascot.svg";
@@ -104,6 +105,7 @@ export default function DashboardPage() {
                     transition={{ delay: 0.05, duration: 0.3 }}
                     className="mb-6"
                 >
+                    <GuestSessionClaimer />
                     <ProfileCompletionBanner />
                 </motion.div>
 

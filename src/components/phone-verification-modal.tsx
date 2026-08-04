@@ -106,27 +106,21 @@ export function PhoneVerificationModal({ isOpen, onClose, onSuccess, currentPhon
 
       if (verifyError) throw verifyError;
 
-      // 2. IMPORTANT: Supabase handles auth.users, but we must manually sync public.profiles!
-      // In a real production app, this is often better handled by an auth.users UPDATE database trigger,
-      // but doing it client-side explicitly ensures our UI updates instantly contextually.
-      
-      const sessionData = await supabase.auth.getSession();
-      const userId = sessionData.data.session?.user.id;
+      // 2. Sync the verified state onto public.profiles.
+      //
+      // This used to write phone_verified: true straight from the browser. The OTP was
+      // genuinely checked by Supabase Auth above, but the profile flag was a separate,
+      // forgeable write — and a trigger grants +20 trust score when it flips, which moves
+      // the user's tier, withdrawal limit and withdrawal cooldown. So the points were
+      // effectively self-service.
+      //
+      // sync_phone_verification() reads phone_confirmed_at from auth.users, which the
+      // client cannot set, and only then updates the profile.
+      const { data: syncResult, error: syncError } = await supabase.rpc('sync_phone_verification');
 
-      if (userId) {
-        const { error: profileError } = await supabase
-          .from('profiles')
-          .update({ 
-            phone_verified: true,
-            phone: formattedPhone,
-            updated_at: new Date().toISOString()
-          })
-          .eq('id', userId);
-          
-        if (profileError) {
-           console.error("Profile sync error, but auth succeeded:", profileError);
-           // We don't throw here because technically the verification succeeded
-        }
+      if (syncError || !syncResult?.success) {
+        // The OTP itself succeeded, so don't fail the flow — but this is worth seeing.
+        console.error("Phone verification sync failed:", syncError?.message || syncResult?.error);
       }
 
       // 3. Success callback to refresh parent banner

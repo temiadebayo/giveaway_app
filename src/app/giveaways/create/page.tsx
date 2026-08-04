@@ -117,11 +117,9 @@ export default function CreateGiveawayPage() {
         const supabase = createClient();
         const { data: { user } } = await supabase.auth.getUser();
         if (user) {
-            const { data: profile } = await supabase
-                .from('profiles')
-                .select('display_name, phone')
-                .eq('id', user.id)
-                .single();
+            // phone is column-revoked from `authenticated`; read the caller's own row
+            // through get_my_profile() instead.
+            const { data: profile } = await supabase.rpc('get_my_profile');
 
             if (profile && profile.display_name && profile.phone) {
                 setProfileComplete(true);

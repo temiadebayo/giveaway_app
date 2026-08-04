@@ -3,15 +3,23 @@
 import { useState, useEffect, useCallback, useRef } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { createTapGame, TapGameState } from "@/lib/tap-game-engine";
+import { fps } from "@/lib/fps";
 import { Trophy, Zap, Timer, Target, Sparkles } from "lucide-react";
 import confetti from "canvas-confetti";
 
 interface TapGameProps {
     duration?: number;
-    onGameEnd?: (state: TapGameState) => void;
+    /**
+     * `tapOffsets` are millisecond offsets from the start of the round. They are what
+     * gets submitted — the server recomputes the score from them. `state.score` is
+     * display-only and is sent alongside purely so a mismatch can be detected.
+     */
+    onGameEnd?: (state: TapGameState, tapOffsets: number[]) => void;
     onScoreUpdate?: (score: number) => void;
     disabled?: boolean;
     autoStart?: boolean;
+    giveawayId?: string;
+    fingerprintId?: string | null;
 }
 
 interface FloatingScore {
@@ -26,7 +34,9 @@ export function TapGame({
     onGameEnd,
     onScoreUpdate,
     disabled = false,
-    autoStart = false
+    autoStart = false,
+    giveawayId,
+    fingerprintId,
 }: TapGameProps) {
     const [gameState, setGameState] = useState<TapGameState | null>(null);
     const [isReady, setIsReady] = useState(false);
@@ -42,8 +52,14 @@ export function TapGame({
         gameRef.current.setDuration(duration);
         gameRef.current.onUpdate(setGameState);
         gameRef.current.onEnd((state) => {
-            onGameEnd?.(state);
-            // Celebration confetti
+            // Client-side pattern analysis is a UX signal only — it reports, it does not
+            // gate. The authoritative check is score_tap_run() in SQL, which re-derives
+            // the score and its own bot flags from the same timings.
+            const validation = gameRef.current?.validateTapPattern();
+            if (validation && !validation.valid && validation.flags.length > 0 && giveawayId) {
+                fps.cheatDetected(giveawayId, validation.flags, validation.confidence, fingerprintId);
+            }
+            onGameEnd?.(state, gameRef.current?.getTapOffsets() ?? []);
             confetti({
                 particleCount: 100,
                 spread: 70,

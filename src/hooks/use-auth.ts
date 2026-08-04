@@ -19,11 +19,10 @@ export function useAuth() {
         setError(null);
 
         try {
-            // Include fingerprint in redirect URL for guest account linking
+            // No fingerprint in the URL: guest history is claimed client-side from the
+            // session token in localStorage (see GuestSessionClaimer). A credential in a
+            // redirect URL leaks into history, Referer headers and access logs.
             const callbackUrl = new URL(`${window.location.origin}/auth/callback`);
-            if (fingerprint?.hash) {
-                callbackUrl.searchParams.set('fingerprint', fingerprint.hash);
-            }
 
             const { error } = await supabase.auth.signInWithOAuth({
                 provider,
@@ -45,11 +44,10 @@ export function useAuth() {
         setError(null);
 
         try {
-            // Include fingerprint in redirect URL for guest account linking
+            // No fingerprint in the URL: guest history is claimed client-side from the
+            // session token in localStorage (see GuestSessionClaimer). A credential in a
+            // redirect URL leaks into history, Referer headers and access logs.
             const callbackUrl = new URL(`${window.location.origin}/auth/callback`);
-            if (fingerprint?.hash) {
-                callbackUrl.searchParams.set('fingerprint', fingerprint.hash);
-            }
 
             const { error } = await supabase.auth.signInWithOtp({
                 email,
@@ -95,11 +93,10 @@ export function useAuth() {
         setError(null);
 
         try {
-            // Include fingerprint in redirect URL for guest account linking
+            // No fingerprint in the URL: guest history is claimed client-side from the
+            // session token in localStorage (see GuestSessionClaimer). A credential in a
+            // redirect URL leaks into history, Referer headers and access logs.
             const callbackUrl = new URL(`${window.location.origin}/auth/callback`);
-            if (fingerprint?.hash) {
-                callbackUrl.searchParams.set('fingerprint', fingerprint.hash);
-            }
 
             const { data, error } = await supabase.auth.signUp({
                 email,

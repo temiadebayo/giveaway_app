@@ -177,9 +177,7 @@ export function TierBenefitsCard({ tier }: TierBenefitsCardProps) {
         {
             icon: Clock,
             label: "Hold Time",
-            value: benefits.withdrawalHoldHours === 0
-                ? "Instant"
-                : `${benefits.withdrawalHoldHours} hours`
+            value: `${benefits.withdrawalHoldHours} hours`
         },
         {
             icon: Crown,

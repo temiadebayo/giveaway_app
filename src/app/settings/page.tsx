@@ -147,11 +147,10 @@ export default function SettingsPage() {
         setUserEmail(user.email || 'No email provided');
         setUserId(user.id);
 
-        const { data, error } = await supabase
-            .from('profiles')
-            .select('username, display_name, phone, bank_name, account_name, account_number, id_verified, phone_verified, notification_preferences, privacy_settings')
-            .eq('id', user.id)
-            .single();
+        // Private columns (phone, bank details, verification state) are column-revoked
+        // from `authenticated` so one user cannot read another's. get_my_profile()
+        // returns the caller's own row in full.
+        const { data, error } = await supabase.rpc('get_my_profile');
 
         if (data && !error) {
             setProfile({

@@ -19,7 +19,7 @@ export async function POST(
     try {
         const { id: giveawayId } = await params;
         const body = await request.json();
-        const { fingerprintId, guestName } = body;
+        const { fingerprintId, guestName, sessionToken } = body;
 
         if (!fingerprintId) {
             return NextResponse.json(
@@ -51,30 +51,73 @@ export async function POST(
             );
         }
 
+        // Resolve the caller's guest session, or mint one.
+        //
+        // The session token — not the fingerprint — is what authorises claiming a prize
+        // later. A fingerprint is observable by anyone watching the leaderboard, so it can
+        // never be the credential. See 20260803100000_phase1_guest_sessions.sql.
+        let sessionId: string | null = null;
+        let issuedToken: string | null = null;
+
+        if (sessionToken) {
+            const { data: resolved } = await supabase.rpc('resolve_guest_session', {
+                p_token: sessionToken,
+            });
+            sessionId = (resolved as string) ?? null;
+        }
+
+        if (!sessionId) {
+            const { data: minted, error: mintError } = await supabase.rpc('create_guest_session', {
+                p_fingerprint: fingerprintId,
+                p_user_agent: request.headers.get('user-agent'),
+                p_ip_address: request.headers.get('x-forwarded-for')?.split(',')[0]?.trim() ?? null,
+            });
+
+            if (mintError || !minted?.session_id) {
+                console.error('Guest session mint error:', mintError?.message);
+                return NextResponse.json(
+                    { success: false, error: 'Could not start guest session' },
+                    { status: 500 }
+                );
+            }
+
+            sessionId = minted.session_id as string;
+            issuedToken = minted.token as string;
+        }
+
         // Check if already joined
         const { data: existing } = await supabase
             .from('guest_participants')
             .select('id')
             .eq('giveaway_id', giveawayId)
-            .eq('fingerprint_id', fingerprintId)
-            .single();
+            .eq('guest_session_id', sessionId)
+            .maybeSingle();
 
         if (existing) {
-            return NextResponse.json({ success: true, alreadyJoined: true });
+            return NextResponse.json({
+                success: true,
+                alreadyJoined: true,
+                sessionId,
+                ...(issuedToken ? { sessionToken: issuedToken } : {}),
+            });
         }
 
-        // COOLDOWN CHECK: Prevent recent winners of this host from joining
+        // COOLDOWN CHECK: Prevent recent winners of this host from joining.
+        // Scoped by session and joined to giveaways properly — the previous version used
+        // .filter('giveaways.host_id', ...) on a query with no embedded join, which
+        // PostgREST does not evaluate as intended, so the check never actually fired.
         if (giveaway.prevent_previous_winners_hours && giveaway.prevent_previous_winners_hours > 0) {
-            const timeThreshold = new Date(Date.now() - giveaway.prevent_previous_winners_hours * 60 * 60 * 1000).toISOString();
+            const timeThreshold = new Date(
+                Date.now() - giveaway.prevent_previous_winners_hours * 60 * 60 * 1000
+            ).toISOString();
 
             const { data: recentWins } = await supabase
                 .from('guest_participants')
-                .select('id')
-                .eq('fingerprint_id', fingerprintId)
+                .select('id, giveaways!inner(host_id)')
+                .eq('guest_session_id', sessionId)
                 .eq('is_winner', true)
                 .gte('completed_at', timeThreshold)
-                .not('giveaways', 'is', null)
-                .filter('giveaways.host_id', 'eq', giveaway.host_id)
+                .eq('giveaways.host_id', giveaway.host_id)
                 .limit(1);
 
             if (recentWins && recentWins.length > 0) {
@@ -90,6 +133,7 @@ export async function POST(
             .from('guest_participants')
             .insert({
                 giveaway_id: giveawayId,
+                guest_session_id: sessionId,
                 fingerprint_id: fingerprintId,
                 guest_name: guestName || null,
             });
@@ -125,7 +169,13 @@ export async function POST(
             console.error('Broadcast error (non-fatal):', broadcastErr);
         }
 
-        return NextResponse.json({ success: true });
+        // The raw token is returned exactly once, on the request that minted it. It is
+        // never retrievable again — only its SHA-256 hash is stored.
+        return NextResponse.json({
+            success: true,
+            sessionId,
+            ...(issuedToken ? { sessionToken: issuedToken } : {}),
+        });
     } catch (err) {
         console.error('Guest join error:', err);
         return NextResponse.json(
@@ -144,23 +194,30 @@ export async function GET(
 ) {
     try {
         const { id: giveawayId } = await params;
-        const fingerprintId = request.nextUrl.searchParams.get('fingerprintId');
+        const sessionToken = request.nextUrl.searchParams.get('sessionToken');
 
-        if (!fingerprintId) {
-            return NextResponse.json(
-                { success: false, error: 'Fingerprint ID is required' },
-                { status: 400 }
-            );
+        if (!sessionToken) {
+            return NextResponse.json({ participation: null });
         }
 
         const supabase = getAdminClient();
 
+        const { data: sessionId } = await supabase.rpc('resolve_guest_session', {
+            p_token: sessionToken,
+        });
+
+        if (!sessionId) {
+            return NextResponse.json({ participation: null });
+        }
+
+        // fingerprint_id and linked_user_id are deliberately not selected — the client
+        // has no use for them and they should not travel to the browser.
         const { data, error } = await supabase
             .from('guest_participants')
-            .select('*')
+            .select('id, giveaway_id, guest_session_id, guest_name, score, taps, best_streak, joined_at, completed_at, is_winner')
             .eq('giveaway_id', giveawayId)
-            .eq('fingerprint_id', fingerprintId)
-            .single();
+            .eq('guest_session_id', sessionId)
+            .maybeSingle();
 
         if (error || !data) {
             return NextResponse.json({ participation: null });
@@ -186,74 +243,70 @@ export async function PUT(
     try {
         const { id: giveawayId } = await params;
         const body = await request.json();
-        const { fingerprintId, score, taps, bestStreak } = body;
+        const { sessionToken, tapOffsets, clientScore } = body;
 
-        if (!fingerprintId) {
+        if (!sessionToken) {
             return NextResponse.json(
-                { success: false, error: 'Fingerprint ID is required' },
+                { success: false, error: 'Guest session required' },
+                { status: 400 }
+            );
+        }
+
+        if (!Array.isArray(tapOffsets)) {
+            return NextResponse.json(
+                { success: false, error: 'Tap timings required' },
                 { status: 400 }
             );
         }
 
         const supabase = getAdminClient();
 
-        // Check if already submitted
-        const { data: existing } = await supabase
-            .from('guest_participants')
-            .select('completed_at')
-            .eq('giveaway_id', giveawayId)
-            .eq('fingerprint_id', fingerprintId)
-            .single();
+        // Scores are keyed on the session token, not the fingerprint. A fingerprint is
+        // readable by anyone; submitting a score for someone else must not be possible.
+        const { data: sessionId } = await supabase.rpc('resolve_guest_session', {
+            p_token: sessionToken,
+        });
 
-        if (existing?.completed_at) {
+        if (!sessionId) {
             return NextResponse.json(
-                { success: false, error: 'Score already submitted' },
-                { status: 400 }
+                { success: false, error: 'Invalid guest session' },
+                { status: 403 }
             );
         }
 
-        // Validate score is humanly possible
-        const { data: giveaway } = await supabase
-            .from('giveaways')
-            .select('game_duration_seconds')
-            .eq('id', giveawayId)
-            .single();
+        // Scoring, validation, round-state checks, duplicate-submission checks and
+        // security event logging all live in submit_guest_score(), which shares its
+        // scoring core with the authenticated path. Keeping one implementation is the
+        // point: the previous split let the guest route drift to looser bounds than
+        // the RPC used for signed-in players.
+        const { data: result, error: submitError } = await supabase.rpc('submit_guest_score', {
+            p_giveaway_id: giveawayId,
+            p_session_id: sessionId,
+            p_tap_offsets: tapOffsets,
+            p_client_score: typeof clientScore === 'number' ? clientScore : null,
+        });
 
-        const duration = giveaway?.game_duration_seconds || 30;
-        const maxTapsPerSecond = 25;
-        const SCORE_MULTIPLIER_TOLERANCE = 8.0; // Allow significant variance for 5x multipliers + bonuses
-
-        const maxPossibleTaps = duration * maxTapsPerSecond;
-        const maxPossibleScore = taps * 10 * SCORE_MULTIPLIER_TOLERANCE;
-
-        if (taps > maxPossibleTaps || score > maxPossibleScore) {
+        if (submitError) {
+            console.error('Guest score submit error:', submitError.message);
             return NextResponse.json(
-                { success: false, error: 'Invalid score detected' },
-                { status: 400 }
-            );
-        }
-
-        // Update score
-        const { error: updateError } = await supabase
-            .from('guest_participants')
-            .update({
-                score,
-                taps,
-                best_streak: bestStreak,
-                completed_at: new Date().toISOString(),
-            })
-            .eq('giveaway_id', giveawayId)
-            .eq('fingerprint_id', fingerprintId);
-
-        if (updateError) {
-            console.error('Guest score update error:', updateError.message);
-            return NextResponse.json(
-                { success: false, error: updateError.message },
+                { success: false, error: 'Failed to submit score' },
                 { status: 500 }
             );
         }
 
-        return NextResponse.json({ success: true });
+        if (!result?.success) {
+            return NextResponse.json(
+                { success: false, error: result?.error || 'Score rejected' },
+                { status: 400 }
+            );
+        }
+
+        return NextResponse.json({
+            success: true,
+            score: result.score,
+            taps: result.taps,
+            best_streak: result.best_streak,
+        });
     } catch (err) {
         console.error('Guest score submit error:', err);
         return NextResponse.json(

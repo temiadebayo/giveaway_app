@@ -30,8 +30,11 @@ yarn-debug.log*
 yarn-error.log*
 .pnpm-debug.log*
 
-# env files (can opt-in for committing if needed)
+# env files — everything is ignored EXCEPT the template.
+# .env.example carries no secrets and must be committed: it is the only record of which
+# variables a deployment needs. Without it, setting up Vercel is guesswork.
 .env*
+!.env.example
 
 # vercel
 .vercel
